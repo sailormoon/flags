@@ -1,5 +1,5 @@
-#ifndef HEADER_FLAGS
-#define HEADER_FLAGS
+#ifndef FLAGS_H_
+#define FLAGS_H_
 
 #include <algorithm>
 #include <experimental/optional>
@@ -141,4 +141,4 @@ struct args {
 
 }  // namespace flags
 
-#endif  // HEADER_FLAGS
+#endif  // FLAGS_H_
