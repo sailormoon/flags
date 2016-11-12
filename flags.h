@@ -2,6 +2,8 @@
 #define FLAGS_H_
 
 #include <algorithm>
+#include <array>
+#include <experimental/array>
 #include <experimental/optional>
 #include <experimental/string_view>
 #include <sstream>
@@ -10,8 +12,9 @@
 #include <vector>
 
 namespace flags {
-using std::experimental::optional;
+using std::experimental::make_array;
 using std::experimental::nullopt;
+using std::experimental::optional;
 using std::experimental::string_view;
 using argument_map = std::unordered_map<string_view, optional<string_view>>;
 
@@ -102,7 +105,7 @@ optional<std::string> get(const argument_map& options,
   return nullopt;
 }
 
-constexpr std::array<const char*, 5> falsities{"0", "n", "no", "f", "false"};
+constexpr auto falsities = make_array("0", "n", "no", "f", "false");
 template <>
 optional<bool> get(const argument_map& options, const string_view& option) {
   if (const auto value = get_value(options, option)) {
@@ -125,7 +128,7 @@ struct args {
   }
 
   template <class T>
-  T get_or(const string_view& option, T&& default_value) const {
+  T get(const string_view& option, T&& default_value) const {
     return detail::get<T>(options_, option).value_or(default_value);
   }
 

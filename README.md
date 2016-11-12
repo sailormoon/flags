@@ -1,11 +1,13 @@
 # ⛳ flags
 Simple, extensible, header-only C++17 argument parser.
 
+
+<!-- vim-markdown-toc GFM -->
 * [why](#why)
 * [requirements](#requirements)
 * [api](#api)
   * [get](#get)
-  * [get_or](#get_or)
+  * [get (with default value)](#get-with-default-value)
   * [positional](#positional)
 * [usage](#usage)
   * [example](#example)
@@ -18,6 +20,8 @@ Simple, extensible, header-only C++17 argument parser.
       * [bools](#bools)
 * [contributing](#contributing)
 
+<!-- vim-markdown-toc -->
+
 # why
 Other argument parsers are:
 - bloated
@@ -26,7 +30,7 @@ Other argument parsers are:
 - complicated
 
 # requirements
-A modern compiler and standard library supporting both `std:optional` and `std::string_view`.
+A modern compiler and standard library supporting `optional`, `nullopt`, `string_view`, and `make_array` in `std::experimental`.
 
 # api
 `flags::args` exposes three methods:
@@ -36,8 +40,8 @@ A modern compiler and standard library supporting both `std:optional` and `std::
 
 Attempts to parse the given key on the command-line. If the string is malformed or the argument was not passed, returns `nullopt`. Otherwise, returns the parsed type as an optional.
 
-## get_or
-`T get_or(const std::string_view& key, T&& default_value) const`
+## get (with default value)
+`T get(const std::string_view& key, T&& default_value) const`
 
 Functions the same as `get`, except if the value is malformed or the key was not provided, returns `default_value`. Otherwise, returns the parsed type.
 
@@ -63,7 +67,7 @@ int main(int argc, char** argv) {
   }
   std::cout << "That's " << *count << " incredible, colossal credits!" << std::endl;
 
-  if (args.get_or<bool>("laugh", false)) {
+  if (args.get<bool>("laugh", false)) {
     std::cout << "Ha ha ha ha!" << std::endl;
   }
   return 0;
@@ -88,7 +92,7 @@ $ ./program --count=5 --laugh
 int main(int argc, char** argv) {
   const flags::args args(argc, argv);
   const auto& files = args.positional();
-  const auto verbose = args.get_or<bool>("verbose", false);
+  const auto verbose = args.get<bool>("verbose", false);
   if (verbose) {
     std::cout << "I'm a verbose program! I'll be reading the following files: " << std::endl;
     for (const auto& file : files) {
