@@ -112,7 +112,7 @@ optional<bool> get(const argument_map& options, const string_view& option) {
     return std::none_of(falsities.begin(), falsities.end(),
                         [&value](auto falsity) { return *value == falsity; });
   }
-  return false;
+  return nullopt;
 }
 }  // namespace detail
 
