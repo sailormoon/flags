@@ -134,8 +134,9 @@ std::istream& operator>>(std::istream& stream, Date& date) {
 int main(int argc, char** argv) {
   const flags::args args(argc, argv);
   if (const auto date = args.get<Date>("date")) {
-    // Output %Y:%m:%d if a date was provided.
-    std::cout << date->day << ":" << date->month << ":" << date->year << std::endl;
+    // Output %Y/%m/%d if a date was provided.
+    std::cout << date->year << ":" << date->month << ":" << date->day
+              << std::endl;
   } else {
     // Sad face if no date was provided or if the input was malformed.
     std::cout << ":(" << std::endl;
@@ -145,7 +146,7 @@ int main(int argc, char** argv) {
 ```
 
 ```bash
-$ ./program --date="2016 11 10"
+$ ./program --date="10 11 2016"
 > 2016:11:10
 ```
 
