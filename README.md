@@ -173,7 +173,7 @@ booleans are a special case. The following values make an argument considered `f
 - `no`
 - `0`
 
-Additionally, if you are parsing `[key]`, if `no[key]` is passed in, `[key]` will be considered false. If none of these conditions are met, the boolean is considered truthy.
+If none of these conditions are met, the bool is considered `true`.
 
 # contributing
-Contributions of any variety are greatly appreciated. This software is public domain, view the LICENSE for more details.
+Contributions of any variety are greatly appreciated. All code is passed through `clang-format` using the Google style.
