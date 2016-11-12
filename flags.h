@@ -1,6 +1,6 @@
+#include <algorithm>
 #include <experimental/optional>
 #include <experimental/string_view>
-#include <iostream>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -69,8 +69,8 @@ struct parser {
   std::vector<string_view> positional_arguments_;
 };
 
-optional<string_view> get_value(const argument_map& options,
-                                const string_view& option) {
+inline optional<string_view> get_value(const argument_map& options,
+                                       const string_view& option) {
   const auto it = options.find(option);
   return it != options.end() ? make_optional(*it->second) : nullopt;
 }
@@ -99,16 +99,14 @@ optional<std::string> get(const argument_map& options,
   return nullopt;
 }
 
+constexpr std::array<const char*, 5> falsities{"0", "n", "no", "f", "false"};
 template <>
 optional<bool> get(const argument_map& options, const string_view& option) {
   if (const auto value = get_value(options, option)) {
-    if (*value == "0" || *value == "n" || *value == "no" || *value == "f" ||
-        *value == "false") {
-      return false;
-    }
-    return true;
+    return std::none_of(falsities.begin(), falsities.end(),
+                        [&value](auto falsity) { return *value == falsity; });
   }
-  return !static_cast<bool>(get_value(options, "no" + option.to_string()));
+  return false;
 }
 }  // namespace detail
 
