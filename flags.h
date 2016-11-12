@@ -1,3 +1,6 @@
+#ifndef HEADER_FLAGS
+#define HEADER_FLAGS
+
 #include <algorithm>
 #include <experimental/optional>
 #include <experimental/string_view>
@@ -137,3 +140,5 @@ struct args {
 };
 
 }  // namespace flags
+
+#endif  // HEADER_FLAGS
