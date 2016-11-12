@@ -1,6 +1,23 @@
 # ⛳ flags
 Simple, extensible, header-only C++17 argument parser.
 
+* [why](#why)
+* [requirements](#requirements)
+* [api](#api)
+  * [get](#get)
+  * [get_or](#get_or)
+  * [positional](#positional)
+* [usage](#usage)
+  * [example](#example)
+  * [another example](#another-example)
+  * [extensions](#extensions)
+    * [example](#example-1)
+  * [command line details](#command-line-details)
+    * [key formatting](#key-formatting)
+    * [value assignment](#value-assignment)
+      * [bools](#bools)
+* [contributing](#contributing)
+
 # why
 Other argument parsers are:
 - bloated
