@@ -29,7 +29,7 @@ struct parser {
   parser& operator=(const parser&) = delete;
 
   argument_map options() const { return options_; }
-  std::vector<string_view> positional_arguments() const {
+  const std::vector<string_view>& positional_arguments() const {
     return positional_arguments_;
   }
 
@@ -117,29 +117,24 @@ optional<bool> get(const argument_map& options, const string_view& option) {
 }  // namespace detail
 
 struct args {
-  args(int argc, char** argv)
-      : parser_(argc, argv),
-        options_(parser_.options()),
-        positional_(parser_.positional_arguments()) {}
+  args(int argc, char** argv) : parser_(argc, argv) {}
 
   template <class T>
   optional<T> get(const string_view& option) const {
-    return detail::get<T>(options_, option);
+    return detail::get<T>(parser_.options(), option);
   }
 
   template <class T>
   T get(const string_view& option, T&& default_value) const {
-    return detail::get<T>(options_, option).value_or(default_value);
+    return detail::get<T>(parser_.options(), option).value_or(default_value);
   }
 
-  const std::vector<std::experimental::string_view>& positional() const {
-    return positional_;
+  const std::vector<string_view>& positional() const {
+    return parser_.positional_arguments();
   }
 
  private:
   const detail::parser parser_;
-  const argument_map options_;
-  const std::vector<string_view> positional_;
 };
 
 }  // namespace flags
