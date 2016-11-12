@@ -28,7 +28,7 @@ struct parser {
   }
   parser& operator=(const parser&) = delete;
 
-  argument_map options() const { return options_; }
+  const argument_map& options() const { return options_; }
   const std::vector<string_view>& positional_arguments() const {
     return positional_arguments_;
   }
