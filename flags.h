@@ -88,7 +88,7 @@ struct parser {
 inline optional<string_view> get_value(const argument_map& options,
                                        const string_view& option) {
   const auto it = options.find(option);
-  return it != options.end() ? make_optional(*it->second) : nullopt;
+  return it != options.end() ? it->second : nullopt;
 }
 
 // Coerces the string value of the given option into <T>.
