@@ -51,12 +51,11 @@ struct parser {
   }
 
   void on_option(const string_view& option) {
-    // Consume the current_option and reassign it to the new option.
+    // Consume the current_option and reassign it to the new option while
+    // removing all leading dashes.
     flush();
     current_option_ = option;
-
-    // Remove leading dashes.
-    current_option_->remove_prefix(option.find_first_not_of('-'));
+    current_option_->remove_prefix(current_option_->find_first_not_of('-'));
 
     // Handle a packed argument (--arg_name=value).
     const auto delimiter = current_option_->find_first_of('=');
@@ -88,7 +87,7 @@ struct parser {
 inline optional<string_view> get_value(const argument_map& options,
                                        const string_view& option) {
   const auto it = options.find(option);
-  return it != options.end() ? it->second : nullopt;
+  return it != options.end() ? make_optional(*it->second) : nullopt;
 }
 
 // Coerces the string value of the given option into <T>.
