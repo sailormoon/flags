@@ -185,9 +185,9 @@ If none of these conditions are met, the bool is considered `true`.
 # testing
 flags uses both [bfg9000](https://github.com/jimporter/bfg9000) and [mettle](https://github.com/jimporter/mettle) for unit-testing. After installing both `bfg9000` and `mettle`, run the following commands to kick off the tests:
 
-1) `9k build/`
-2) `cd build`
-3) `ninja test`
+1. `9k build/`
+2. `cd build`
+3. `ninja test`
 
 # contributing
 Contributions of any variety are greatly appreciated. All code is passed through `clang-format` using the Google style.
