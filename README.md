@@ -1,5 +1,5 @@
 # ⛳ flags
-Simple, extensible, header-only C++17 argument parser released in the public domain.
+Simple, extensible, header-only C++17 argument parser released into the public domain.
 
 
 <!-- vim-markdown-toc GFM -->
