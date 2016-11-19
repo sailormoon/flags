@@ -1,5 +1,5 @@
 # ⛳ flags
-Simple, extensible, header-only C++17 argument parser.
+Simple, extensible, header-only C++17 argument parser. Also public domain.
 
 
 <!-- vim-markdown-toc GFM -->
@@ -7,7 +7,7 @@ Simple, extensible, header-only C++17 argument parser.
 * [requirements](#requirements)
 * [api](#api)
   * [get](#get)
-  * [get (with default value)](#get-with-default-value)
+  * [get (with default value)](#get-(with-default-value))
   * [positional](#positional)
 * [usage](#usage)
   * [example](#example)
@@ -18,6 +18,7 @@ Simple, extensible, header-only C++17 argument parser.
     * [key formatting](#key-formatting)
     * [value assignment](#value-assignment)
       * [bools](#bools)
+* [testing](#testing)
 * [contributing](#contributing)
 
 <!-- vim-markdown-toc -->
@@ -51,6 +52,7 @@ Functions the same as `get`, except if the value is malformed or the key was not
 Returns all of the positional arguments from argv in order.
 
 # usage
+Just include `flags.h` from the `include` directory into your project.
 
 ## example
 ```c++
@@ -137,11 +139,11 @@ int main(int argc, char** argv) {
     // Output %Y/%m/%d if a date was provided.
     std::cout << date->year << ":" << date->month << ":" << date->day
               << std::endl;
-  } else {
-    // Sad face if no date was provided or if the input was malformed.
-    std::cout << ":(" << std::endl;
+    return 0;
   }
-  return 0;
+  // Sad face if no date was provided or if the input was malformed.
+  std::cerr << ":(" << std::endl;
+  return 1;
 }
 ```
 
@@ -179,6 +181,13 @@ booleans are a special case. The following values make an argument considered `f
 - `0`
 
 If none of these conditions are met, the bool is considered `true`.
+
+# testing
+flags uses both [bfg9000](https://github.com/jimporter/bfg9000) and [mettle](https://github.com/jimporter/mettle) for unit-testing. After installing both `bfg9000` and `mettle`, run the following commands to kick off the tests:
+
+1) `9k build/`
+2) `cd build`
+3) `ninja test`
 
 # contributing
 Contributions of any variety are greatly appreciated. All code is passed through `clang-format` using the Google style.
