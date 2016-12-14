@@ -161,4 +161,15 @@ suite<> flag_parsing("flag parsing", [](auto& _) {
     expect(fixture.args().get<int>("foobar"), equal_to(nullopt));
     expect(fixture.args().get<double>("foobar"), equal_to(nullopt));
   });
+
+  // Multiple options are fetched correctly.
+  _.test("multiarg", []() {
+    const auto fixture =
+        args_fixture::create(make_array("-f", "42", "--bar", "43"));
+    expect(*fixture.args().get<int>({"f", "foo"}), equal_to(42));
+    expect(fixture.args().get<int>({"f", "foo"}, 42), equal_to(42));
+    expect(*fixture.args().get<int>({"b", "bar"}), equal_to(43));
+    expect(fixture.args().get<int>({"b", "bar"}, 43), equal_to(43));
+    expect(fixture.args().get<int>({"z", "zzz"}), equal_to(nullopt));
+  });
 });

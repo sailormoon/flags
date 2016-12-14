@@ -145,6 +145,22 @@ struct args {
     return get<T>(option).value_or(default_value);
   }
 
+  template <class T>
+  optional<T> get(const std::vector<string_view>& options) const {
+    for (const auto& option : options) {
+      const auto value = get<T>(option);
+      if (value) {
+        return value;
+      }
+    }
+    return nullopt;
+  }
+
+  template <class T>
+  T get(const std::vector<string_view>& options, T&& default_value) const {
+    get<T>(options).value_or(default_value);
+  }
+
   const std::vector<string_view>& positional() const {
     return parser_.positional_arguments();
   }
