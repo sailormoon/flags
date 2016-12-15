@@ -145,6 +145,27 @@ struct args {
     return get<T>(option).value_or(default_value);
   }
 
+  // Base case for parameter packed get_multi()
+  template <class T>
+  optional<T> get_multi() const {
+    return nullopt;
+  }
+
+  template <class T, class... Opts>
+  optional<T> get_multi(const string_view& option, Opts... options) const {
+    const auto val = get<T>(option);
+    if (val) {
+      return val;
+    }
+    return get_multi<T>(options...);
+  }
+
+  template <class T, class... Opts>
+  T get_multi(T&& default_value, const string_view& option,
+              Opts... options) const {
+    return get_multi<T>(option, options...).value_or(default_value);
+  }
+
   const std::vector<string_view>& positional() const {
     return parser_.positional_arguments();
   }
