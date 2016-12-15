@@ -46,13 +46,13 @@ Attempts to parse the given key on the command-line. If the string is malformed 
 
 Functions the same as `get`, except if the value is malformed or the key was not provided, returns `default_value`. Otherwise, returns the parsed type.
 
-## get (with vector of option aliases)
-`std::optional<T> get(const std::vector<std::string_view>& keys) const`
+## get_multi
+`std::optional<T> get(const string_view& option, Opts... options) const`
 
 Attempts to parse the given key aliases on the command-line. If the strings are malformed or the keys were not passed, returns `nullopt`. Otherwise, returns the parsed type as an optional.
 
-## get (with vector of option aliases and default value)
-`T get(const std::vector<std::string_view>& key, T&& default_value) const`
+## get_multi (with default value)
+`std::optional<T> get(T&& default_value, const string_view& option, Opts... options) const`
 
 Functions the same as `get` with vector, except if the values are malformed or the keys were not provided, returns `default_value`. Otherwise, returns the parsed type.
 
@@ -104,7 +104,7 @@ $ ./program --count=5 --laugh
 int main(int argc, char** argv) {
   const flags::args args(argc, argv);
   const auto& files = args.positional();
-  if (args.get<bool>({"h", "help"}, false)) {
+  if (args.get<bool>(false, "h", "help")) {
     std::cout << "Usage: " << argv[0] << " [--verbose] [--count COUNT]" << std::endl;
     return 0;
   }
