@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <deque>
 #include <experimental/array>
 #include <experimental/optional>
 #include <experimental/string_view>
@@ -22,8 +23,8 @@ namespace detail {
 // Non-destructively parses the argv tokens.
 // * If the token begins with a -, it will be considered an option.
 // * If the token does not begin with a -, it will be considered a value for the
-// previous option. If there was no previous option, it will be considered a
-// positional argument.
+//   previous option. If there was no previous option, it will be considered a
+//   positional argument.
 struct parser {
   parser(const int argc, char** argv) {
     for (int i = 1; i < argc; ++i) {
@@ -130,6 +131,93 @@ optional<bool> get(const argument_map& options, const string_view& option) {
   }
   return nullopt;
 }
+
+// Validates a parser's inputs to the given schema.
+struct validator {
+  validator(const string_view& program_name,
+            const optional<string_view>& program_description,
+            const parser& parser)
+      : program_name_(program_name),
+        program_description_(program_description),
+        parser_(parser) {}
+
+  template <class T>
+  validator& require(const string_view& option,
+                     const string_view& description) {
+    add_help<T>(option, description, true);
+    return *this;
+  }
+
+  template <class T>
+  validator& optional(const string_view& option,
+                      const string_view& description) {
+    add_help<T>(option, description, false);
+    return *this;
+  }
+
+  void print_help(std::ostream& out) {
+    out << "usage: " << program_name_;
+    for (const auto& help : help_) {
+      out << " ";
+      if (help.required) {
+        out << help.option;
+      } else {
+        out << "[" << help.option << "]";
+      }
+    }
+    if (program_description_) {
+      out << std::endl << std::endl << *program_description_;
+    }
+    if (!help_.empty()) {
+      out << std::endl << std::endl << "options: " << std::endl;
+      for (const auto& help : help_) {
+        std::cout << "  --" << help.option << " " << help.type << std::endl;
+      }
+    }
+  }
+
+ private:
+  struct Help {
+    Help(const string_view& option, const string_view& description,
+         const string_view& type, const bool required, const bool valid)
+        : option(option),
+          description(description),
+          type(type),
+          required(required),
+          valid(valid) {}
+    const std::string option;
+    const std::string description;
+    const std::string type;
+    const bool required;
+    const bool valid;
+  };
+
+  template <class T>
+  void add_help(const string_view& option, const string_view& description,
+                const bool required) {
+    help_.emplace_back(option, description, typeid(T).name(), required,
+                       validate<T>(option, required));
+  }
+
+  template <class T>
+  bool validate(const string_view& option, const bool required) {
+    if (!required &&
+        parser_.options().find(option) == parser_.options().end()) {
+      return true;
+    }
+    if (!detail::get<T>(parser_.options(), option)) {
+      return false;
+    }
+    return true;
+  }
+
+  const std::string program_name_;
+  const flags::optional<std::string> program_description_;
+  const parser& parser_;
+  bool valid_ = true;
+  std::deque<Help> help_;
+};
+
 }  // namespace detail
 
 struct args {
@@ -147,6 +235,12 @@ struct args {
 
   const std::vector<string_view>& positional() const {
     return parser_.positional_arguments();
+  }
+
+  detail::validator validate(
+      const string_view& program_name,
+      const optional<string_view>& program_description = nullopt) const {
+    return detail::validator(program_name, program_description, parser_);
   }
 
  private:
