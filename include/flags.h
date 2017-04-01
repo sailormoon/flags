@@ -11,10 +11,10 @@
 #include <vector>
 
 namespace flags {
+namespace detail {
 using argument_map =
     std::unordered_map<std::string_view, std::optional<std::string_view>>;
 
-namespace detail {
 // Non-destructively parses the argv tokens.
 // * If the token begins with a -, it will be considered an option.
 // * If the token does not begin with a -, it will be considered a value for the
@@ -71,7 +71,7 @@ struct parser {
     }
     // Consume the preceding option and assign its value.
     options_.emplace(*current_option_, value);
-    current_option_ = std::nullopt;
+    current_option_.reset();
   }
 
   std::optional<std::string_view> current_option_;
