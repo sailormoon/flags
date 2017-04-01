@@ -1,14 +1,11 @@
 #include "flags.h"
-#include <experimental/array>
-#include <experimental/string_view>
+#include <array>
 #include <mettle.hpp>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 using namespace mettle;
-using std::experimental::make_array;
-using std::experimental::nullopt;
-using std::experimental::string_view;
 
 namespace {
 // TODO: Initialize argv into unique_ptr so RAII can take care of everything.
@@ -16,7 +13,8 @@ namespace {
 
 // Allocates a position within argv and copies the given view to it.
 // argv must already be allocated.
-void initialize_arg(char** argv, const size_t index, const string_view& view) {
+void initialize_arg(char** argv, const size_t index,
+                    const std::string_view& view) {
   argv[index] =
       reinterpret_cast<char*>(malloc((view.size() + 1) * sizeof(char)));
   memcpy(argv[index], view.data(), view.size() + 1);
@@ -28,14 +26,15 @@ void initialize_arg(char** argv, const size_t index, const string_view& view) {
 // - argv[N] will always be NULL.
 // argv's final size will be the array's size plus two due to the first and last
 // conditions.
-template <size_t N>
-char** initialize_argv(const std::array<const char*, N> array) {
-  char** argv = reinterpret_cast<char**>(malloc((N + 2) * sizeof(char*)));
+char** initialize_argv(const std::initializer_list<const char*> args) {
+  char** argv =
+      reinterpret_cast<char**>(malloc((args.size() + 2) * sizeof(char*)));
   initialize_arg(argv, 0, "TEST");
-  for (size_t i = 0; i < N; ++i) {
-    initialize_arg(argv, i + 1, array[i]);
+  std::size_t i = 0;
+  for (const auto& arg : args) {
+    initialize_arg(argv, ++i, arg);
   }
-  argv[N + 1] = NULL;
+  argv[args.size() + 1] = NULL;
   return argv;
 }
 
@@ -49,9 +48,8 @@ void cleanup_argv(char** argv) {
 
 // Simple fixture for (de)allocating argv and initalizing flags::args.
 struct args_fixture {
-  template <size_t N>
-  static args_fixture create(const std::array<const char*, N> array) {
-    return {array.size(), initialize_argv(array)};
+  static args_fixture create(const std::initializer_list<const char*> args) {
+    return {args.size(), initialize_argv(args)};
   }
   ~args_fixture() { cleanup_argv(argv_); }
 
@@ -74,64 +72,62 @@ suite<> positional_arguments("positional arguments", [](auto& _) {
   // Lack of positional arguments.
   _.test("absence", []() {
     const auto fixture =
-        args_fixture::create(make_array("--no", "positional", "--arguments"));
+        args_fixture::create({"--no", "positional", "--arguments"});
     expect(fixture.args().positional().size(), equal_to(0));
   });
 
   // Testing the existence of positional arguments with no options or flags.
   _.test("basic", []() {
-    const auto fixture =
-        args_fixture::create(make_array("positional", "arguments"));
+    const auto fixture = args_fixture::create({"positional", "arguments"});
     expect(fixture.args().positional().size(), equal_to(2));
-    expect(fixture.args().positional()[0].to_string(), equal_to("positional"));
-    expect(fixture.args().positional()[1].to_string(), equal_to("arguments"));
+    expect(fixture.args().positional()[0], equal_to("positional"));
+    expect(fixture.args().positional()[1], equal_to("arguments"));
   });
 
   // Adding options to the mix.
   _.test("with options", []() {
     const auto fixture = args_fixture::create(
-        make_array("positional", "arguments", "-with", "--some", "---options"));
+        {"positional", "arguments", "-with", "--some", "---options"});
     expect(fixture.args().positional().size(), equal_to(2));
-    expect(fixture.args().positional()[0].to_string(), equal_to("positional"));
-    expect(fixture.args().positional()[1].to_string(), equal_to("arguments"));
+    expect(fixture.args().positional()[0], equal_to("positional"));
+    expect(fixture.args().positional()[1], equal_to("arguments"));
   });
 
   // Adding flags to the mix.
   _.test("with flags", []() {
     const auto fixture = args_fixture::create(
-        make_array("--flag", "\"not positional\"", "positional",
-                   "--another-flag", "foo", "arguments", "--bar", "42"));
+        {"--flag", "\"not positional\"", "positional", "--another-flag", "foo",
+         "arguments", "--bar", "42"});
     expect(fixture.args().positional().size(), equal_to(2));
-    expect(fixture.args().positional()[0].to_string(), equal_to("positional"));
-    expect(fixture.args().positional()[1].to_string(), equal_to("arguments"));
+    expect(fixture.args().positional()[0], equal_to("positional"));
+    expect(fixture.args().positional()[1], equal_to("arguments"));
   });
 
   // Adding both flags and options.
   _.test("with flags and options", []() {
-    const auto fixture = args_fixture::create(make_array(
-        "--flag", "\"not positional\"", "positional", "--another-flag", "foo",
-        "arguments", "--bar", "42", "--some", "--options", "--foobaz"));
+    const auto fixture = args_fixture::create(
+        {"--flag", "\"not positional\"", "positional", "--another-flag", "foo",
+         "arguments", "--bar", "42", "--some", "--options", "--foobaz"});
     expect(fixture.args().positional().size(), equal_to(2));
-    expect(fixture.args().positional()[0].to_string(), equal_to("positional"));
-    expect(fixture.args().positional()[1].to_string(), equal_to("arguments"));
+    expect(fixture.args().positional()[0], equal_to("positional"));
+    expect(fixture.args().positional()[1], equal_to("arguments"));
   });
 });
 
 suite<> flag_parsing("flag parsing", [](auto& _) {
   // Basic bool parsing.
   _.test("bool", []() {
-    const auto fixture =
-        args_fixture::create(make_array("--foo", "1", "--bar", "no"));
+    const auto fixture = args_fixture::create({"--foo", "1", "--bar", "no"});
     expect(*fixture.args().get<bool>("foo"), equal_to(true));
     expect(fixture.args().get<bool>("foo", false), equal_to(true));
     expect(*fixture.args().get<bool>("bar"), equal_to(false));
-    expect(fixture.args().get<bool>("nonexistent"), equal_to(nullopt));
+    expect(fixture.args().get<bool>("nonexistent"), equal_to(std::nullopt));
   });
 
   // Verifying all the falsities are actually false.
   _.test("falsities", []() {
     for (const auto falsity : flags::detail::falsities) {
-      const auto fixture = args_fixture::create(make_array("--foo", falsity));
+      const auto fixture = args_fixture::create({"--foo", falsity});
       expect(*fixture.args().get<bool>("foo"), equal_to(false));
       expect(fixture.args().get<bool>("foo", true), equal_to(false));
     }
@@ -142,7 +138,7 @@ suite<> flag_parsing("flag parsing", [](auto& _) {
     constexpr char LOREM_IPSUM[] =
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do "
         "eiusmod tempor incididunt ut labore et dolore magna aliqua.";
-    const auto fixture = args_fixture::create(make_array("--foo", LOREM_IPSUM));
+    const auto fixture = args_fixture::create({"--foo", LOREM_IPSUM});
     expect(*fixture.args().get<std::string>("foo"),
            equal_to(std::string(LOREM_IPSUM)));
   });
@@ -151,14 +147,14 @@ suite<> flag_parsing("flag parsing", [](auto& _) {
   // succesfully parsed.
   _.test("numbers", []() {
     const auto fixture =
-        args_fixture::create(make_array("--foo", "42", "--bar", "42.42"));
+        args_fixture::create({"--foo", "42", "--bar", "42.42"});
     expect(*fixture.args().get<int>("foo"), equal_to(42));
     expect(*fixture.args().get<double>("foo"), equal_to(42));
     expect(*fixture.args().get<int>("bar"), equal_to(42));
     expect(*fixture.args().get<double>("bar"), equal_to(42.42));
     expect(fixture.args().get<int>("foobar", 42), equal_to(42));
     expect(fixture.args().get<double>("foobar", 42.4242), equal_to(42.4242));
-    expect(fixture.args().get<int>("foobar"), equal_to(nullopt));
-    expect(fixture.args().get<double>("foobar"), equal_to(nullopt));
+    expect(fixture.args().get<int>("foobar"), equal_to(std::nullopt));
+    expect(fixture.args().get<double>("foobar"), equal_to(std::nullopt));
   });
 });

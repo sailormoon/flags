@@ -5,7 +5,7 @@ from os.path import splitext
 bfg9000_required_version('>=0.2.0')
 project('flags', version='1.0pre')
 
-global_options(['-std=c++17'], lang='c++')
+global_options(['-std=c++1z', '-Wall', '-Wextra'], lang='c++')
 mettle = system_package('mettle')
 includes = header_directory('include', include='flags.h')
 driver = test_driver(
