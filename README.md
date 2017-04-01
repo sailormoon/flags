@@ -1,4 +1,6 @@
 # ⛳ flags
+[![Build Status](https://travis-ci.org/sailormoon/flags.svg?branch=master)](https://travis-ci.org/sailormoon/flags)
+
 Simple, extensible, header-only C++17 argument parser released into the public domain.
 
 

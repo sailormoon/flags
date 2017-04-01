@@ -1,0 +1,41 @@
+# Inspired by https://github.com/jimporter/mettle/blob/master/.travis.yml
+
+language: cpp
+sudo: false
+
+env:
+  global:
+    - COMPILER=clang++
+    - COMMONFLAGS="-Wall -Wextra -pedantic -Werror"
+
+compiler:
+  - clang
+  # TODO: Add GCC7.0 target.
+
+os:
+  - osx
+
+before_script:
+  - |
+    brew update
+    brew install llvm
+    brew install ninja
+    brew install python
+    pip install lxml
+  - pip install bfg9000
+  - |
+    ${COMPILER} --version
+    git clone https://github.com/jimporter/mettle/
+    cd mettle
+    scripts/vendorize_bencode.py
+    CXX=${COMPILER} 9k build/
+    cd build/
+    ninja install
+    cd ${TRAVIS_BUILD_DIR}
+    rvm get stable # See travis-ci/travis-ci#6307
+script:
+  - |
+    set -e
+    CXX="/usr/local/opt/llvm/bin/${COMPILER}" CPPFLAGS="${COMMONFLAGS} -I/usr/local/opt/llvm/include" LDFLAGS="-L/usr/local/opt/llvm/lib" 9k build --backend=ninja
+    cd build
+    ninja test
