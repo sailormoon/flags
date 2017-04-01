@@ -7,7 +7,7 @@ Simple, extensible, header-only C++17 argument parser released into the public d
 * [requirements](#requirements)
 * [api](#api)
   * [get](#get)
-  * [get (with default value)](#get-(with-default-value))
+  * [get (with default value)](#get-with-default-value)
   * [positional](#positional)
 * [usage](#usage)
   * [example](#example)
@@ -31,7 +31,7 @@ Other argument parsers are:
 - complicated
 
 # requirements
-A modern compiler and standard library supporting `optional`, `nullopt`, `string_view`, and `make_array` in `std::experimental`.
+GCC 7.0 or Clang 4.0.0 at a minimum. This library makes extensive use of `optional`, `nullopt`, and `string_view`.
 
 # api
 `flags::args` exposes three methods:
