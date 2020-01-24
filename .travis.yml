@@ -6,7 +6,8 @@ sudo: false
 env:
   global:
     - COMPILER=clang++
-    - COMMONFLAGS="-Wall -Wextra -pedantic -Werror"
+    - COMMONFLAGS="-Wall -Wextra -pedantic -Werror -I/usr/local/opt/llvm/include"
+    - LDFLAGS="-L/usr/local/opt/llvm/lib, -Wl,-rpath,/usr/local/opt/llvm/lib"
 
 compiler:
   - clang
@@ -28,7 +29,7 @@ before_script:
     git clone https://github.com/jimporter/mettle/
     cd mettle
     scripts/vendorize_bencode.py
-    CXX=${COMPILER} 9k build/
+    CXX="/usr/local/opt/llvm/bin/${COMPILER}" CPPFLAGS="${COMMONFLAGS}" LDFLAGS="${LDFLAGS}" 9k build/
     cd build/
     ninja install
     cd ${TRAVIS_BUILD_DIR}
@@ -36,6 +37,6 @@ before_script:
 script:
   - |
     set -e
-    CXX="/usr/local/opt/llvm/bin/${COMPILER}" CPPFLAGS="${COMMONFLAGS} -I/usr/local/opt/llvm/include" LDFLAGS="-L/usr/local/opt/llvm/lib" 9k build --backend=ninja
+    CXX="/usr/local/opt/llvm/bin/${COMPILER}" CPPFLAGS="${COMMONFLAGS}" LDFLAGS="${LDFLAGS}" 9k build/ --backend=ninja
     cd build
     ninja test
