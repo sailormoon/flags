@@ -5,6 +5,7 @@ Simple, extensible, header-only C++17 argument parser released into the public d
 
 
 <!-- vim-markdown-toc GFM -->
+
 * [why](#why)
 * [requirements](#requirements)
 * [api](#api)
@@ -66,13 +67,13 @@ int main(int argc, char** argv) {
 
   const auto count = args.get<int>("count");
   if (!count) {
-    std::cerr << "No count supplied. :(" << std::endl;
+    std::cerr << "No count supplied. :(\n";
     return 1;
   }
-  std::cout << "That's " << *count << " incredible, colossal credits!" << std::endl;
+  std::cout << "That's " << *count << " incredible, colossal credits!\n";
 
   if (args.get<bool>("laugh", false)) {
-    std::cout << "Ha ha ha ha!" << std::endl;
+    std::cout << "Ha ha ha ha!\n";
   }
   return 0;
 }
@@ -98,9 +99,9 @@ int main(int argc, char** argv) {
   const auto& files = args.positional();
   const auto verbose = args.get<bool>("verbose", false);
   if (verbose) {
-    std::cout << "I'm a verbose program! I'll be reading the following files: " << std::endl;
+    std::cout << "I'm a verbose program! I'll be reading the following files:\n";
     for (const auto& file : files) {
-      std::cout << "* " << file << std::endl;
+      std::cout << "* " << file << '\n';
     }
   }
   // read files(files);
@@ -139,12 +140,11 @@ int main(int argc, char** argv) {
   const flags::args args(argc, argv);
   if (const auto date = args.get<Date>("date")) {
     // Output %Y/%m/%d if a date was provided.
-    std::cout << date->year << ":" << date->month << ":" << date->day
-              << std::endl;
+    std::cout << date->year << ":" << date->month << ":" << date->day << '\n';
     return 0;
   }
   // Sad face if no date was provided or if the input was malformed.
-  std::cerr << ":(" << std::endl;
+  std::cerr << ":(\n";
   return 1;
 }
 ```
@@ -155,7 +155,7 @@ $ ./program --date="10 11 2016"
 ```
 
 ```bash
-$ ./program"
+$ ./program
 > :(
 ```
 
