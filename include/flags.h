@@ -83,7 +83,7 @@ struct parser {
 inline std::optional<std::string_view> get_value(
     const argument_map& options, const std::string_view& option) {
   if (const auto it = options.find(option); it != options.end()) {
-    return *it->second;
+    return it->second;
   }
   return std::nullopt;
 }
