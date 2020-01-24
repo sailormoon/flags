@@ -54,8 +54,8 @@ struct parser {
     current_option_->remove_prefix(current_option_->find_first_not_of('-'));
 
     // Handle a packed argument (--arg_name=value).
-    const auto delimiter = current_option_->find_first_of('=');
-    if (delimiter != std::string_view::npos) {
+    if (const auto delimiter = current_option_->find_first_of('=');
+        delimiter != std::string_view::npos) {
       auto value = *current_option_;
       value.remove_prefix(delimiter + 1 /* skip '=' */);
       current_option_->remove_suffix(current_option_->size() - delimiter);
@@ -66,7 +66,7 @@ struct parser {
   void on_value(const std::optional<std::string_view>& value = std::nullopt) {
     // If there's not an option preceding the value, it's a positional argument.
     if (!current_option_) {
-      positional_arguments_.emplace_back(*value);
+      if (value) positional_arguments_.emplace_back(*value);
       return;
     }
     // Consume the preceding option and assign its value.
@@ -82,8 +82,10 @@ struct parser {
 // If a key exists, return an optional populated with its value.
 inline std::optional<std::string_view> get_value(
     const argument_map& options, const std::string_view& option) {
-  const auto it = options.find(option);
-  return it != options.end() ? make_optional(*it->second) : std::nullopt;
+  if (const auto it = options.find(option); it != options.end()) {
+    return *it->second;
+  }
+  return std::nullopt;
 }
 
 // Coerces the string value of the given option into <T>.
@@ -93,8 +95,7 @@ template <class T>
 std::optional<T> get(const argument_map& options,
                      const std::string_view& option) {
   if (const auto view = get_value(options, option)) {
-    T value;
-    if (std::istringstream(std::string(*view)) >> value) return value;
+    if (T value; std::istringstream(std::string(*view)) >> value) return value;
   }
   return std::nullopt;
 }
