@@ -127,41 +127,44 @@ std::optional<bool> get(const argument_map& options,
     return std::none_of(falsities.begin(), falsities.end(),
                         [&value](auto falsity) { return *value == falsity; });
   }
-  if (options.find(option) != options.end())
-      return true;
+  if (options.find(option) != options.end()) return true;
   return std::nullopt;
 }
-
 
 // Coerces the string value of the given positional index into <T>.
 // If the value cannot be properly parsed or the key does not exist, returns
 // nullopt.
 template <class T>
 std::optional<T> get(const std::vector<std::string_view>& positional_arguments,
-    size_t positional_index) {
-    if (positional_index < positional_arguments.size()) {
-        if (T value; std::istringstream(std::string(positional_arguments[positional_index])) >> value) return value;
-    }
-    return std::nullopt;
+                     size_t positional_index) {
+  if (positional_index < positional_arguments.size()) {
+    if (T value; std::istringstream(
+                     std::string(positional_arguments[positional_index])) >>
+                 value)
+      return value;
+  }
+  return std::nullopt;
 }
 
 // Since the values are already stored as strings, there's no need to use `>>`.
 template <>
-std::optional<std::string_view> get(const std::vector<std::string_view>& positional_arguments,
+std::optional<std::string_view> get(
+    const std::vector<std::string_view>& positional_arguments,
     size_t positional_index) {
-    if (positional_index < positional_arguments.size()) {
-        return positional_arguments[positional_index];
-    }
-    return std::nullopt;
+  if (positional_index < positional_arguments.size()) {
+    return positional_arguments[positional_index];
+  }
+  return std::nullopt;
 }
 
 template <>
-std::optional<std::string> get(const std::vector<std::string_view>& positional_arguments,
+std::optional<std::string> get(
+    const std::vector<std::string_view>& positional_arguments,
     size_t positional_index) {
-    if (positional_index < positional_arguments.size()) {
-        return std::string(positional_arguments[positional_index]);
-    }
-    return std::nullopt;
+  if (positional_index < positional_arguments.size()) {
+    return std::string(positional_arguments[positional_index]);
+  }
+  return std::nullopt;
 }
 }  // namespace detail
 
@@ -180,12 +183,12 @@ struct args {
 
   template <class T>
   std::optional<T> get(size_t positional_index) const {
-      return detail::get<T>(parser_.positional_arguments(), positional_index);
+    return detail::get<T>(parser_.positional_arguments(), positional_index);
   }
 
   template <class T>
   T get(size_t positional_index, T&& default_value) const {
-      return get<T>(positional_index).value_or(default_value);
+    return get<T>(positional_index).value_or(default_value);
   }
 
   const std::vector<std::string_view>& positional() const {

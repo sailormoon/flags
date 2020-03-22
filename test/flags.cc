@@ -1,4 +1,5 @@
 #include "flags.h"
+
 #include <array>
 #include <mettle.hpp>
 #include <stdexcept>
@@ -88,8 +89,10 @@ suite<> positional_arguments("positional arguments", [](auto& _) {
     expect(fixture.args().get<std::string_view>(0), equal_to("positional"));
     expect(fixture.args().get<std::string_view>(1), equal_to("arguments"));
     expect(fixture.args().get<std::string_view>(2), equal_to(std::nullopt));
-    expect(fixture.args().get<std::string>(0, "default"), equal_to("positional"));
-    expect(fixture.args().get<std::string>(1, "default"), equal_to("arguments"));
+    expect(fixture.args().get<std::string>(0, "default"),
+           equal_to("positional"));
+    expect(fixture.args().get<std::string>(1, "default"),
+           equal_to("arguments"));
     expect(fixture.args().get<std::string>(2, "default"), equal_to("default"));
   });
 
@@ -104,8 +107,10 @@ suite<> positional_arguments("positional arguments", [](auto& _) {
     expect(fixture.args().get<std::string_view>(0), equal_to("positional"));
     expect(fixture.args().get<std::string_view>(1), equal_to("arguments"));
     expect(fixture.args().get<std::string_view>(2), equal_to(std::nullopt));
-    expect(fixture.args().get<std::string>(0, "default"), equal_to("positional"));
-    expect(fixture.args().get<std::string>(1, "default"), equal_to("arguments"));
+    expect(fixture.args().get<std::string>(0, "default"),
+           equal_to("positional"));
+    expect(fixture.args().get<std::string>(1, "default"),
+           equal_to("arguments"));
     expect(fixture.args().get<std::string>(2, "default"), equal_to("default"));
   });
 
@@ -121,8 +126,10 @@ suite<> positional_arguments("positional arguments", [](auto& _) {
     expect(fixture.args().get<std::string_view>(0), equal_to("positional"));
     expect(fixture.args().get<std::string_view>(1), equal_to("arguments"));
     expect(fixture.args().get<std::string_view>(2), equal_to(std::nullopt));
-    expect(fixture.args().get<std::string>(0, "default"), equal_to("positional"));
-    expect(fixture.args().get<std::string>(1, "default"), equal_to("arguments"));
+    expect(fixture.args().get<std::string>(0, "default"),
+           equal_to("positional"));
+    expect(fixture.args().get<std::string>(1, "default"),
+           equal_to("arguments"));
     expect(fixture.args().get<std::string>(2, "default"), equal_to("default"));
   });
 
@@ -138,8 +145,10 @@ suite<> positional_arguments("positional arguments", [](auto& _) {
     expect(fixture.args().get<std::string_view>(0), equal_to("positional"));
     expect(fixture.args().get<std::string_view>(1), equal_to("arguments"));
     expect(fixture.args().get<std::string_view>(2), equal_to(std::nullopt));
-    expect(fixture.args().get<std::string>(0, "default"), equal_to("positional"));
-    expect(fixture.args().get<std::string>(1, "default"), equal_to("arguments"));
+    expect(fixture.args().get<std::string>(0, "default"),
+           equal_to("positional"));
+    expect(fixture.args().get<std::string>(1, "default"),
+           equal_to("arguments"));
     expect(fixture.args().get<std::string>(2, "default"), equal_to("default"));
   });
 });
@@ -147,11 +156,12 @@ suite<> positional_arguments("positional arguments", [](auto& _) {
 suite<> flag_parsing("flag parsing", [](auto& _) {
   // Basic bool parsing.
   _.test("bool", []() {
-    const auto fixture = args_fixture::create({"--foo", "1", "--bar", "no", "--verbose"});
+    const auto fixture =
+        args_fixture::create({"--foo", "1", "--bar", "no", "--verbose"});
     expect(*fixture.args().get<bool>("foo"), equal_to(true));
     expect(fixture.args().get<bool>("foo", false), equal_to(true));
     expect(*fixture.args().get<bool>("bar"), equal_to(false));
-    expect(fixture.args().get<bool>("verbose"), equal_to(true));
+    expect(*fixture.args().get<bool>("verbose"), equal_to(true));
     expect(fixture.args().get<bool>("nonexistent"), equal_to(std::nullopt));
   });
 
