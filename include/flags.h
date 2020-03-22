@@ -133,7 +133,7 @@ std::optional<bool> get(const argument_map& options,
 }
 
 
-// Coerces the string value of the given option into <T>.
+// Coerces the string value of the given positional index into <T>.
 // If the value cannot be properly parsed or the key does not exist, returns
 // nullopt.
 template <class T>
