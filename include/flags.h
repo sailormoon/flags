@@ -129,6 +129,38 @@ std::optional<bool> get(const argument_map& options,
   }
   return std::nullopt;
 }
+
+
+// Coerces the string value of the given option into <T>.
+// If the value cannot be properly parsed or the key does not exist, returns
+// nullopt.
+template <class T>
+std::optional<T> get(const std::vector<std::string_view>& positional_arguments,
+    size_t positional_index) {
+    if (positional_index < positional_arguments.size()) {
+        if (T value; std::istringstream(std::string(positional_arguments[positional_index])) >> value) return value;
+    }
+    return std::nullopt;
+}
+
+// Since the values are already stored as strings, there's no need to use `>>`.
+template <>
+std::optional<std::string_view> get(const std::vector<std::string_view>& positional_arguments,
+    size_t positional_index) {
+    if (positional_index < positional_arguments.size()) {
+        return positional_arguments[positional_index];
+    }
+    return std::nullopt;
+}
+
+template <>
+std::optional<std::string> get(const std::vector<std::string_view>& positional_arguments,
+    size_t positional_index) {
+    if (positional_index < positional_arguments.size()) {
+        return std::string(positional_arguments[positional_index]);
+    }
+    return std::nullopt;
+}
 }  // namespace detail
 
 struct args {
@@ -142,6 +174,16 @@ struct args {
   template <class T>
   T get(const std::string_view& option, T&& default_value) const {
     return get<T>(option).value_or(default_value);
+  }
+
+  template <class T>
+  std::optional<T> get(size_t positional_index) const {
+      return detail::get<T>(parser_.positional_arguments(), positional_index);
+  }
+
+  template <class T>
+  T get(size_t positional_index, T&& default_value) const {
+      return get<T>(positional_index).value_or(default_value);
   }
 
   const std::vector<std::string_view>& positional() const {
