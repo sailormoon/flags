@@ -127,6 +127,8 @@ std::optional<bool> get(const argument_map& options,
     return std::none_of(falsities.begin(), falsities.end(),
                         [&value](auto falsity) { return *value == falsity; });
   }
+  if (options.find(option) != options.end())
+      return true;
   return std::nullopt;
 }
 
