@@ -102,13 +102,13 @@ std::optional<T> get(const argument_map& options,
 
 // Since the values are already stored as strings, there's no need to use `>>`.
 template <>
-std::optional<std::string_view> get(const argument_map& options,
+inline std::optional<std::string_view> get(const argument_map& options,
                                     const std::string_view& option) {
   return get_value(options, option);
 }
 
 template <>
-std::optional<std::string> get(const argument_map& options,
+inline std::optional<std::string> get(const argument_map& options,
                                const std::string_view& option) {
   if (const auto view = get<std::string_view>(options, option)) {
     return std::string(*view);
@@ -121,7 +121,7 @@ std::optional<std::string> get(const argument_map& options,
 // present.
 constexpr std::array<const char*, 5> falsities{{"0", "n", "no", "f", "false"}};
 template <>
-std::optional<bool> get(const argument_map& options,
+inline std::optional<bool> get(const argument_map& options,
                         const std::string_view& option) {
   if (const auto value = get_value(options, option)) {
     return std::none_of(falsities.begin(), falsities.end(),
@@ -148,7 +148,7 @@ std::optional<T> get(const std::vector<std::string_view>& positional_arguments,
 
 // Since the values are already stored as strings, there's no need to use `>>`.
 template <>
-std::optional<std::string_view> get(
+inline std::optional<std::string_view> get(
     const std::vector<std::string_view>& positional_arguments,
     size_t positional_index) {
   if (positional_index < positional_arguments.size()) {
@@ -158,7 +158,7 @@ std::optional<std::string_view> get(
 }
 
 template <>
-std::optional<std::string> get(
+inline std::optional<std::string> get(
     const std::vector<std::string_view>& positional_arguments,
     size_t positional_index) {
   if (positional_index < positional_arguments.size()) {
