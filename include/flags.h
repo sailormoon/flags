@@ -13,7 +13,7 @@
 namespace flags {
 namespace detail {
 using argument_map =
-    std::unordered_map<std::string_view, std::optional<std::string_view>>;
+    std::unordered_multimap<std::string_view, std::optional<std::string_view>>;
 
 // Non-destructively parses the argv tokens.
 // * If the token begins with a -, it will be considered an option.
@@ -86,6 +86,21 @@ inline std::optional<std::string_view> get_value(
     return it->second;
   }
   return std::nullopt;
+}
+
+// Return a vector of string views.
+inline std::vector<std::string_view> get_values(
+    const argument_map& options, const std::string_view& option) {
+    std::vector<std::string_view> values;
+    if (options.bucket_count() == 0) return values;
+    argument_map::size_type bucket = options.bucket(option);
+    values.reserve(options.bucket_size(bucket));
+    auto iter = options.cbegin(bucket);
+    auto end = options.cend(bucket);
+    while (iter != end) {
+        values.emplace_back(iter++->second.value());
+    }
+    return std::move(values);
 }
 
 // Coerces the string value of the given option into <T>.
@@ -193,6 +208,10 @@ struct args {
 
   const std::vector<std::string_view>& positional() const {
     return parser_.positional_arguments();
+  }
+
+  std::vector<std::string_view> values(const std::string_view& option) const {
+      return detail::get_values(parser_.options(), option);
   }
 
  private:
