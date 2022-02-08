@@ -55,7 +55,11 @@ Functions the same as `get`, except if the value is malformed or the key was not
 Returns all of the positional arguments from argv in order.
 
 # usage
+### just the headers
 Just include `flags.h` from the `include` directory into your project.
+
+### CMake
+You can also use this project in cmake as a submodule or as a fully-installed module.
 
 ## example
 ```c++
@@ -110,7 +114,7 @@ int main(int argc, char** argv) {
 ```
 ```bash
 $ ./program /tmp/one /tmp/two /tmp/three --verbose
-> I'm a verbose program! I'll be reading the following files: 
+> I'm a verbose program! I'll be reading the following files:
 > * /tmp/one
 > * /tmp/two
 > * /tmp/three
