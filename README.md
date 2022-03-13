@@ -55,11 +55,64 @@ Functions the same as `get`, except if the value is malformed or the key was not
 Returns all of the positional arguments from argv in order.
 
 # usage
+### just the headers
 Just include `flags.h` from the `include` directory into your project.
+
+## Using CMake
+
+### CMake Installation
+
+Flags can be built and installed using [CMake], e.g.
+
+```sh
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
+$ make install
+```
+
+The above will install Flags into the standard installation path on a UNIX
+system, e.g. `/usr/local/include/`. To change the installation path, use:
+
+```sh
+$ cmake .. -DCMAKE_INSTALL_PREFIX=../install
+```
+
+in the above.
+
+### `find_package`
+
+Installation creates a `flags-config.cmake` which allows CMake
+projects to find Flags using `find_package`:
+
+```cmake
+find_package(flags)
+```
+
+This exports the `flags` target which can be linked against any other
+target. Linking against `flags` automatically sets the include
+directories and required flags for C++17 or later. For example:
+
+```cmake
+add_executable(myexe mysources...)
+target_link_libraries(myexe PRIVATE flags)
+```
+
+### `add_subdirectory`
+
+The Flags can also be added as a dependency with `add_subdirectory`:
+
+```cmake
+add_subdirectory(path/to/flags)
+```
+
+This also exports the `flags` target which can be linked against any
+other target just as with the installation case.
 
 ## example
 ```c++
-#include "flags.h"
+#include "flags.h" // #include <flags.h> for cmake
 #include <iostream>
 
 int main(int argc, char** argv) {
@@ -90,7 +143,7 @@ $ ./program --count=5 --laugh
 
 ## another example
 ```c++
-#include "flags.h"
+#include "flags.h" // #include <flags.h> for cmake
 #include <iostream>
 #include <string>
 
@@ -110,7 +163,7 @@ int main(int argc, char** argv) {
 ```
 ```bash
 $ ./program /tmp/one /tmp/two /tmp/three --verbose
-> I'm a verbose program! I'll be reading the following files: 
+> I'm a verbose program! I'll be reading the following files:
 > * /tmp/one
 > * /tmp/two
 > * /tmp/three
