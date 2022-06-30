@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <iomanip>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -95,7 +96,9 @@ template <class T>
 std::optional<T> get(const argument_map& options,
                      const std::string_view& option) {
   if (const auto view = get_value(options, option)) {
-    if (T value; std::istringstream(std::string(*view)) >> value) return value;
+    if (T value;
+        std::istringstream(std::string(*view)) >> std::setbase(0) >> value)
+      return value;
   }
   return std::nullopt;
 }
@@ -140,7 +143,7 @@ std::optional<T> get(const std::vector<std::string_view>& positional_arguments,
   if (positional_index < positional_arguments.size()) {
     if (T value; std::istringstream(
                      std::string(positional_arguments[positional_index])) >>
-                 value)
+                 std::setbase(0) >> value)
       return value;
   }
   return std::nullopt;
