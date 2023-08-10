@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <cstring>
 
 using namespace mettle;
 
@@ -182,6 +183,12 @@ suite<> flag_parsing("flag parsing", [](auto& _) {
     const auto fixture = args_fixture::create({"--foo", LOREM_IPSUM});
     expect(*fixture.args().get<std::string>("foo"),
            equal_to(std::string(LOREM_IPSUM)));
+  });
+
+  // Empty values
+  _.test("empty", [](){
+    const auto fixture = args_fixture::create({"--foo", ""});
+    expect(*fixture.args().get<std::string>("foo"), equal_to(""));
   });
 
   // Basic number parsing. Verifying ints are truncated and doubles are

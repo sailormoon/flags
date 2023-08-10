@@ -38,6 +38,11 @@ struct parser {
  private:
   // Advance the state machine for the current token.
   void churn(const std::string_view& item) {
+    if(item.empty())
+    {
+      on_value(item);
+      return;
+    }
     item.at(0) == '-' ? on_option(item) : on_value(item);
   }
 
