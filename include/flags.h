@@ -13,7 +13,7 @@
 namespace flags {
 namespace detail {
 using argument_map =
-    std::unordered_map<std::string_view, std::optional<std::string_view>>;
+    std::unordered_multimap<std::string_view, std::optional<std::string_view>>;
 
 // Non-destructively parses the argv tokens.
 // * If the token begins with a -, it will be considered an option.
@@ -93,6 +93,17 @@ inline std::optional<std::string_view> get_value(
   return std::nullopt;
 }
 
+// If a key exists, return an optional populated with all values
+inline std::vector<std::optional<std::string_view>> get_values(
+    const argument_map& options, const std::string_view& option) {
+  std::vector<std::optional<std::string_view>> views;
+  const auto range = options.equal_range(option);
+  for (auto it = range.first; it != range.second; ++it) {
+    views.push_back(it->second);
+  }
+  return views;
+}
+
 // Coerces the string value of the given option into <T>.
 // If the value cannot be properly parsed or the key does not exist, returns
 // nullopt.
@@ -134,6 +145,62 @@ inline std::optional<bool> get(const argument_map& options,
   }
   if (options.find(option) != options.end()) return true;
   return std::nullopt;
+}
+
+// Coerces the string values of the given option into std::vector<T>.
+// If a value cannot be properly parsed it is not added. If there are
+// no suitable values or the key does not exist, returns nullopt.
+template <class T>
+std::vector<std::optional<T>> get_multiple(const argument_map& options,
+                                           const std::string_view& option) {
+  std::vector<std::optional<T>> values;
+  const auto views = get_values(options, option);
+  for (const auto &view : views) {
+    if (!view) {
+      values.push_back(std::nullopt);
+      continue;
+    }
+    if (T value; std::istringstream(std::string(*view)) >> value) {
+      values.push_back(value);
+    } else {
+      values.push_back(std::nullopt);
+    }
+  }
+  return values;
+}
+
+// Since the values are already stored as strings, there's no need to use `>>`.
+template <>
+inline std::vector<std::optional<std::string_view>> get_multiple(
+                  const argument_map& options, const std::string_view& option) {
+  return get_values(options, option);
+}
+
+template <>
+inline std::vector<std::optional<std::string>> get_multiple(
+                  const argument_map& options, const std::string_view& option) {
+  const auto views = get_values(options, option);
+  std::vector<std::optional<std::string>> values(views.begin(), views.end());
+  return values;
+}
+
+// Special case for booleans: if the value is in the falsities array (see get<bool>)
+// the option will be considered falsy. Otherwise, it will be considered truthy just
+// for being present.
+template <>
+inline std::vector<std::optional<bool>> get_multiple(
+                  const argument_map& options, const std::string_view& option) {
+  const auto views = get_values(options, option);
+  std::vector<std::optional<bool>> values;
+  for (const auto view : views) {
+    if (!view) {
+      values.push_back(true);
+      continue;
+    }
+    values.push_back(std::none_of(falsities.begin(), falsities.end(),
+                                  [&view](auto falsity) { return view == falsity; }));
+  }
+  return values;
 }
 
 // Coerces the string value of the given positional index into <T>.
@@ -184,6 +251,22 @@ struct args {
   template <class T>
   T get(const std::string_view& option, T&& default_value) const {
     return get<T>(option).value_or(default_value);
+  }
+
+  template <class T>
+  std::vector<std::optional<T>> get_multiple(const std::string_view& option) const {
+    return detail::get_multiple<T>(parser_.options(), option);
+  }
+
+  template <class T>
+  std::vector<T> get_multiple(const std::string_view& option, T&& default_value) const {
+    const auto items = get_multiple<T>(option);
+    std::vector<T> values;
+    values.reserve(items.size());
+    for(const auto& item : items) {
+      values.push_back(item ? *item : default_value);
+    }
+    return values;
   }
 
   template <class T>
