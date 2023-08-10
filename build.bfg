@@ -9,12 +9,12 @@ project('flags', version='1.0pre')
 global_options(['-std=c++1z', '-Wall', '-Wextra', '-Werror', '-pedantic'],
                lang='c++')
 mettle = package('mettle')
-includes = header_directory('include', include='flags.h')
+includes = header_directory('include', include='*.h')
 driver = test_driver(
   'mettle -o verbose'
 )
 
-for src in find_files('test', '*.cc'):
+for src in find_files('test/*.cc'):
   path = os.path.join('test', src.path.basename())
   test(executable(
       splitext(path)[0],
