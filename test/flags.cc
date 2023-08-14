@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <cstring>
+#include <algorithm>
 
 using namespace mettle;
 
@@ -39,6 +41,19 @@ char** initialize_argv(const std::initializer_list<const char*> args) {
   return argv;
 }
 
+// Same as above but using a std::vector
+char** initialize_argv(const std::vector<const char*>& args) {
+  char** argv =
+      reinterpret_cast<char**>(malloc((args.size() + 2) * sizeof(char*)));
+  initialize_arg(argv, 0, "TEST");
+  std::size_t i = 0;
+  for (const auto& arg : args) {
+    initialize_arg(argv, ++i, arg);
+  }
+  argv[args.size() + 1] = NULL;
+  return argv;
+}
+
 // Cleans up every item within argv, then argv itself.
 void cleanup_argv(char** argv) {
   size_t index = 0;
@@ -50,6 +65,9 @@ void cleanup_argv(char** argv) {
 // Simple fixture for (de)allocating argv and initalizing flags::args.
 struct args_fixture {
   static args_fixture create(const std::initializer_list<const char*> args) {
+    return {args.size(), initialize_argv(args)};
+  }
+  static args_fixture create(const std::vector<const char*>& args) {
     return {args.size(), initialize_argv(args)};
   }
   ~args_fixture() { cleanup_argv(argv_); }
@@ -182,6 +200,56 @@ suite<> flag_parsing("flag parsing", [](auto& _) {
     const auto fixture = args_fixture::create({"--foo", LOREM_IPSUM});
     expect(*fixture.args().get<std::string>("foo"),
            equal_to(std::string(LOREM_IPSUM)));
+  });
+
+  // Empty values
+  _.test("empty", [](){
+    const auto fixture = args_fixture::create({"--foo", ""});
+    expect(*fixture.args().get<std::string>("foo"), equal_to(""));
+  });
+
+  // Multiple values for one flag
+  _.test("multiple", [](){
+    const auto fixture = args_fixture::create({"--foo", "bar", "--foo", "baz"});
+    auto foo = fixture.args().get_multiple<std::string>("foo");
+    expect(foo.size(), equal_to(2));
+    expect(foo[0].value(), equal_to("bar"));
+    expect(foo[1].value(), equal_to("baz"));
+  });
+
+  _.test("multiple with type", [](){
+    const auto fixture = args_fixture::create({"-x", "-x", "1", "-x", "2"});
+    auto x = fixture.args().get_multiple<int>("x", 0);
+    expect(x.size(), equal_to(3));
+    expect(x[0], equal_to(0));
+    expect(x[1], equal_to(1));
+    expect(x[2], equal_to(2));
+  });
+
+  _.test("multiple falsities", [](){
+    std::vector<const char*> args;
+    for (const auto falsity : flags::detail::falsities) {
+      args.push_back("--foo");
+      args.push_back(falsity);
+    }
+    const auto fixture = args_fixture::create(args);
+    const auto foos1 = fixture.args().get_multiple<bool>("foo");
+    for (const auto& foo : foos1) {
+      expect(foo && *foo, equal_to(false));
+    }
+    const auto foos2 = fixture.args().get_multiple<bool>("foo", true);
+    for (const auto& foo : foos2) {
+      expect(foo, equal_to(false));
+    }
+  });
+
+  _.test("multiple valueless flags", [](){
+    const auto fixture = args_fixture::create({"--foo", "-foo", "--foo", "-foo"});
+    const auto foos = fixture.args().get_multiple<bool>("foo");
+    expect(foos.size(), equal_to(4));
+    for (const auto& foo : foos) {
+      expect(static_cast<bool>(foo), equal_to(true));
+    }
   });
 
   // Basic number parsing. Verifying ints are truncated and doubles are

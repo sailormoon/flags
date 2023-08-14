@@ -13,7 +13,7 @@
 namespace flags {
 namespace detail {
 using argument_map =
-    std::unordered_map<std::string_view, std::optional<std::string_view>>;
+    std::unordered_map<std::string_view, std::vector<std::optional<std::string_view>>>;
 
 // Non-destructively parses the argv tokens.
 // * If the token begins with a -, it will be considered an option.
@@ -38,6 +38,11 @@ struct parser {
  private:
   // Advance the state machine for the current token.
   void churn(const std::string_view& item) {
+    if(item.empty())
+    {
+      on_value(item);
+      return;
+    }
     item.at(0) == '-' ? on_option(item) : on_value(item);
   }
 
@@ -70,7 +75,8 @@ struct parser {
       return;
     }
     // Consume the preceding option and assign its value.
-    options_.emplace(*current_option_, value);
+    // operator[] will insert an empty vector if needed
+    options_[*current_option_].emplace_back(std::move(value));
     current_option_.reset();
   }
 
@@ -83,9 +89,19 @@ struct parser {
 inline std::optional<std::string_view> get_value(
     const argument_map& options, const std::string_view& option) {
   if (const auto it = options.find(option); it != options.end()) {
-    return it->second;
+    // If a key exists, there must be at least one value
+    return it->second[0];
   }
   return std::nullopt;
+}
+
+// If a key exists, return a vector with its values
+inline std::vector<std::optional<std::string_view>> get_values(
+    const argument_map& options, const std::string_view& option) {
+  if (const auto it = options.find(option); it != options.end()) {
+    return it->second;
+  }
+  return {};
 }
 
 // Coerces the string value of the given option into <T>.
@@ -129,6 +145,62 @@ inline std::optional<bool> get(const argument_map& options,
   }
   if (options.find(option) != options.end()) return true;
   return std::nullopt;
+}
+
+// Coerces the string values of the given option into std::vector<T>.
+// If a value cannot be properly parsed it is not added. If there are
+// no suitable values or the key does not exist, returns nullopt.
+template <class T>
+std::vector<std::optional<T>> get_multiple(const argument_map& options,
+                                           const std::string_view& option) {
+  std::vector<std::optional<T>> values;
+  const auto views = get_values(options, option);
+  for (const auto &view : views) {
+    if (!view) {
+      values.push_back(std::nullopt);
+      continue;
+    }
+    if (T value; std::istringstream(std::string(*view)) >> value) {
+      values.push_back(value);
+    } else {
+      values.push_back(std::nullopt);
+    }
+  }
+  return values;
+}
+
+// Since the values are already stored as strings, there's no need to use `>>`.
+template <>
+inline std::vector<std::optional<std::string_view>> get_multiple(
+                  const argument_map& options, const std::string_view& option) {
+  return get_values(options, option);
+}
+
+template <>
+inline std::vector<std::optional<std::string>> get_multiple(
+                  const argument_map& options, const std::string_view& option) {
+  const auto views = get_values(options, option);
+  std::vector<std::optional<std::string>> values(views.begin(), views.end());
+  return values;
+}
+
+// Special case for booleans: if the value is in the falsities array (see get<bool>)
+// the option will be considered falsy. Otherwise, it will be considered truthy just
+// for being present.
+template <>
+inline std::vector<std::optional<bool>> get_multiple(
+                  const argument_map& options, const std::string_view& option) {
+  const auto views = get_values(options, option);
+  std::vector<std::optional<bool>> values;
+  for (const auto view : views) {
+    if (!view) {
+      values.push_back(true);
+      continue;
+    }
+    values.push_back(std::none_of(falsities.begin(), falsities.end(),
+                                  [&view](auto falsity) { return view == falsity; }));
+  }
+  return values;
 }
 
 // Coerces the string value of the given positional index into <T>.
@@ -179,6 +251,22 @@ struct args {
   template <class T>
   T get(const std::string_view& option, T&& default_value) const {
     return get<T>(option).value_or(default_value);
+  }
+
+  template <class T>
+  std::vector<std::optional<T>> get_multiple(const std::string_view& option) const {
+    return detail::get_multiple<T>(parser_.options(), option);
+  }
+
+  template <class T>
+  std::vector<T> get_multiple(const std::string_view& option, T&& default_value) const {
+    const auto items = get_multiple<T>(option);
+    std::vector<T> values;
+    values.reserve(items.size());
+    for(const auto& item : items) {
+      values.push_back(item ? *item : default_value);
+    }
+    return values;
   }
 
   template <class T>
