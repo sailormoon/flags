@@ -212,7 +212,6 @@ suite<> flag_parsing("flag parsing", [](auto& _) {
   _.test("multiple", [](){
     const auto fixture = args_fixture::create({"--foo", "bar", "--foo", "baz"});
     auto foo = fixture.args().get_multiple<std::string>("foo");
-    std::sort(foo.begin(), foo.end()); // multimap doesn't keep order
     expect(foo.size(), equal_to(2));
     expect(foo[0].value(), equal_to("bar"));
     expect(foo[1].value(), equal_to("baz"));
@@ -221,14 +220,12 @@ suite<> flag_parsing("flag parsing", [](auto& _) {
   _.test("multiple with type", [](){
     const auto fixture = args_fixture::create({"-x", "-x", "1", "-x", "2"});
     auto x = fixture.args().get_multiple<int>("x", 0);
-    std::sort(x.begin(), x.end()); // multimap doesn't keep order
     expect(x.size(), equal_to(3));
     expect(x[0], equal_to(0));
     expect(x[1], equal_to(1));
     expect(x[2], equal_to(2));
   });
 
-  // Multiple falsities
   _.test("multiple falsities", [](){
     std::vector<const char*> args;
     for (const auto falsity : flags::detail::falsities) {
@@ -243,6 +240,15 @@ suite<> flag_parsing("flag parsing", [](auto& _) {
     const auto foos2 = fixture.args().get_multiple<bool>("foo", true);
     for (const auto& foo : foos2) {
       expect(foo, equal_to(false));
+    }
+  });
+
+  _.test("multiple valueless flags", [](){
+    const auto fixture = args_fixture::create({"--foo", "-foo", "--foo", "-foo"});
+    const auto foos = fixture.args().get_multiple<bool>("foo");
+    expect(foos.size(), equal_to(4));
+    for (const auto& foo : foos) {
+      expect(static_cast<bool>(foo), equal_to(true));
     }
   });
 

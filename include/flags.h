@@ -13,7 +13,7 @@
 namespace flags {
 namespace detail {
 using argument_map =
-    std::unordered_multimap<std::string_view, std::optional<std::string_view>>;
+    std::unordered_map<std::string_view, std::vector<std::optional<std::string_view>>>;
 
 // Non-destructively parses the argv tokens.
 // * If the token begins with a -, it will be considered an option.
@@ -75,7 +75,8 @@ struct parser {
       return;
     }
     // Consume the preceding option and assign its value.
-    options_.emplace(*current_option_, value);
+    // operator[] will insert an empty vector if needed
+    options_[*current_option_].emplace_back(std::move(value));
     current_option_.reset();
   }
 
@@ -88,20 +89,19 @@ struct parser {
 inline std::optional<std::string_view> get_value(
     const argument_map& options, const std::string_view& option) {
   if (const auto it = options.find(option); it != options.end()) {
-    return it->second;
+    // If a key exists, there must be at least one value
+    return it->second[0];
   }
   return std::nullopt;
 }
 
-// If a key exists, return an optional populated with all values
+// If a key exists, return a vector with its values
 inline std::vector<std::optional<std::string_view>> get_values(
     const argument_map& options, const std::string_view& option) {
-  std::vector<std::optional<std::string_view>> views;
-  const auto range = options.equal_range(option);
-  for (auto it = range.first; it != range.second; ++it) {
-    views.push_back(it->second);
+  if (const auto it = options.find(option); it != options.end()) {
+    return it->second;
   }
-  return views;
+  return {};
 }
 
 // Coerces the string value of the given option into <T>.
