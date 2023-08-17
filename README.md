@@ -37,7 +37,7 @@ Other argument parsers are:
 GCC 7.0 or Clang 4.0.0 at a minimum. This library makes extensive use of `optional`, `nullopt`, and `string_view`.
 
 # api
-`flags::args` exposes three methods:
+`flags::args` exposes seven methods:
 
 ## get
 `std::optional<T> get(const std::string_view& key) const`
@@ -48,6 +48,26 @@ Attempts to parse the given key on the command-line. If the string is malformed 
 `T get(const std::string_view& key, T&& default_value) const`
 
 Functions the same as `get`, except if the value is malformed or the key was not provided, returns `default_value`. Otherwise, returns the parsed type.
+
+## get_multiple
+`std::vector<std::optional<T>> get_multiple(const std::string_view& option) const`
+
+Get all values passed for an option. If no value is specified (`--foo --bar`) or the value is malformed, `nullopt` will be used. Values will be in the order they were passed.
+
+## get_multiple (with default value)
+`std::vector<T> get_multiple(const std::string_view& option, T&& default_value) const`
+
+Functions the same as `get_multiple`, except if the value is malformed or no value is provided, `default_value` will be used.
+
+## get (positional)
+`std::optional<T> get(size_t positional_index) const`
+
+Get an argument from the positional arguments at a specified index. If the value is malformed or the index is invalid, `nullopt` is returned.
+
+## get (positional with default value)
+`T get(size_t positional_index, T&& default_value) const`
+
+Functions the same as positional `get`, except if the value is malformed or the index is invalid, returns `default_value`. Otherwise, returns the parsed type.
 
 ## positional
 `const std::vector<std::string_view>& positional() const`
