@@ -9,6 +9,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <vector>
+#include <cstring>
 
 namespace flags {
 namespace detail {
@@ -23,6 +24,14 @@ using argument_map =
 struct parser {
   parser(const int argc, char** argv) {
     for (int i = 1; i < argc; ++i) {
+      // If this token is "--", skip it and stop parsing
+      if (strcmp(argv[i], "--") == 0) {
+        skipped_tokens_.reserve(argc - i - 1);
+        for (int j = i + 1; j < argc; j++) {
+          skipped_tokens_.emplace_back(argv[j]);
+        }
+        break;
+      }
       churn(argv[i]);
     }
     // If the last token was an option, it needs to be drained.
@@ -33,6 +42,9 @@ struct parser {
   const argument_map& options() const { return options_; }
   const std::vector<std::string_view>& positional_arguments() const {
     return positional_arguments_;
+  }
+  const std::vector<std::string_view>& skipped_tokens() const {
+    return skipped_tokens_;
   }
 
  private:
@@ -83,6 +95,7 @@ struct parser {
   std::optional<std::string_view> current_option_;
   argument_map options_;
   std::vector<std::string_view> positional_arguments_;
+  std::vector<std::string_view> skipped_tokens_;
 };
 
 // If a key exists, return an optional populated with its value.
@@ -281,6 +294,10 @@ struct args {
 
   const std::vector<std::string_view>& positional() const {
     return parser_.positional_arguments();
+  }
+
+  const std::vector<std::string_view>& skipped() const {
+    return parser_.skipped_tokens();
   }
 
  private:
