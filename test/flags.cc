@@ -266,4 +266,18 @@ suite<> flag_parsing("flag parsing", [](auto& _) {
     expect(fixture.args().get<int>("foobar"), equal_to(std::nullopt));
     expect(fixture.args().get<double>("foobar"), equal_to(std::nullopt));
   });
+
+  _.test("skipped tokens", [](){
+    const auto fixture =
+        args_fixture::create({"--foo", "--", "bar", "--baz", "1", "2", "3"});
+    expect(*fixture.args().get<bool>("foo"), equal_to(true));
+    expect(fixture.args().get<bool>("baz"), equal_to(std::nullopt));
+    const std::vector<std::string_view> &skipped = fixture.args().skipped();
+    expect(skipped.size(), equal_to(5));
+    expect(skipped.at(0), equal_to("bar"));
+    expect(skipped.at(1), equal_to("--baz"));
+    expect(skipped.at(2), equal_to("1"));
+    expect(skipped.at(3), equal_to("2"));
+    expect(skipped.at(4), equal_to("3"));
+  });
 });
