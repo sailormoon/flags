@@ -16,9 +16,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Clone mettle
-        run: |
-          git clone https://github.com/jimporter/mettle.git /tmp/mettle
-          git -C /tmp/mettle checkout c00953a8cad7dac67a291228fab84ae5033c6307
+        run: git clone --depth 1 https://github.com/jimporter/mettle.git /tmp/mettle
 
       - name: Build and run tests
         run: |
@@ -26,8 +24,6 @@ jobs:
             -Wall -Wextra -pedantic -Werror \
             -I include \
             -I /tmp/mettle/include \
-            -DINC_METTLE_HPP \
-            -include mettle/header_only.hpp \
             test/flags.cc \
             -o test_flags
           ./test_flags

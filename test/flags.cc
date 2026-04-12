@@ -1,7 +1,7 @@
 #include "flags.h"
 
 #include <array>
-#include <mettle.hpp>
+#include <mettle/header_only.hpp>
 #include <stdexcept>
 #include <string>
 #include <string_view>
