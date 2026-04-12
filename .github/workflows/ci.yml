@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone mettle
+        run: git clone --depth 1 https://github.com/jimporter/mettle.git /tmp/mettle
+
+      - name: Checkout pre-C++20 mettle
+        run: |
+          cd /tmp/mettle
+          COMMIT=$(git log --oneline --all --grep="Start using concepts" --format="%H")
+          git checkout "${COMMIT}^"
+
+      - name: Build and run tests
+        run: |
+          c++ -std=c++20 \
+            -Wall -Wextra -pedantic -Werror \
+            -I include \
+            -I /tmp/mettle/include \
+            -DINC_METTLE_HPP \
+            -include mettle/header_only.hpp \
+            test/flags.cc \
+            -o test_flags
+          ./test_flags

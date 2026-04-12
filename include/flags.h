@@ -1,18 +1,23 @@
-#ifndef FLAGS_H_
-#define FLAGS_H_
+#pragma once
 
 #include <algorithm>
 #include <array>
+#include <concepts>
 #include <optional>
+#include <ranges>
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
-#include <cstring>
 
-namespace flags {
-namespace detail {
+namespace flags::detail {
+
+template <typename T>
+concept Extractable = requires(std::istringstream iss, T val) {
+  { iss >> val } -> std::convertible_to<std::istream&>;
+};
+
 using argument_map =
     std::unordered_map<std::string_view, std::vector<std::optional<std::string_view>>>;
 
@@ -25,7 +30,7 @@ struct parser {
   parser(const int argc, char** argv) {
     for (int i = 1; i < argc; ++i) {
       // If this token is "--", skip it and stop parsing
-      if (strcmp(argv[i], "--") == 0) {
+      if (std::string_view(argv[i]) == "--") {
         skipped_tokens_.reserve(argc - i - 1);
         for (int j = i + 1; j < argc; j++) {
           skipped_tokens_.emplace_back(argv[j]);
@@ -49,7 +54,7 @@ struct parser {
 
  private:
   // Advance the state machine for the current token.
-  void churn(const std::string_view& item) {
+  void churn(std::string_view item) {
     if(item.empty())
     {
       on_value(item);
@@ -63,7 +68,7 @@ struct parser {
     if (current_option_) on_value();
   }
 
-  void on_option(const std::string_view& option) {
+  void on_option(std::string_view option) {
     // Consume the current_option and reassign it to the new option while
     // removing all leading dashes.
     flush();
@@ -100,7 +105,7 @@ struct parser {
 
 // If a key exists, return an optional populated with its value.
 inline std::optional<std::string_view> get_value(
-    const argument_map& options, const std::string_view& option) {
+    const argument_map& options, std::string_view option) {
   if (const auto it = options.find(option); it != options.end()) {
     // If a key exists, there must be at least one value
     return it->second[0];
@@ -110,7 +115,7 @@ inline std::optional<std::string_view> get_value(
 
 // If a key exists, return a vector with its values
 inline std::vector<std::optional<std::string_view>> get_values(
-    const argument_map& options, const std::string_view& option) {
+    const argument_map& options, std::string_view option) {
   if (const auto it = options.find(option); it != options.end()) {
     return it->second;
   }
@@ -122,7 +127,8 @@ inline std::vector<std::optional<std::string_view>> get_values(
 // nullopt.
 template <class T>
 std::optional<T> get(const argument_map& options,
-                     const std::string_view& option) {
+                     std::string_view option) {
+  static_assert(Extractable<T>, "T must support extraction via operator>>");
   if (const auto view = get_value(options, option)) {
     if (T value; std::istringstream(std::string(*view)) >> value) return value;
   }
@@ -132,13 +138,13 @@ std::optional<T> get(const argument_map& options,
 // Since the values are already stored as strings, there's no need to use `>>`.
 template <>
 inline std::optional<std::string_view> get(const argument_map& options,
-                                    const std::string_view& option) {
+                                    std::string_view option) {
   return get_value(options, option);
 }
 
 template <>
 inline std::optional<std::string> get(const argument_map& options,
-                               const std::string_view& option) {
+                               std::string_view option) {
   if (const auto view = get<std::string_view>(options, option)) {
     return std::string(*view);
   }
@@ -151,10 +157,10 @@ inline std::optional<std::string> get(const argument_map& options,
 constexpr std::array<const char*, 5> falsities{{"0", "n", "no", "f", "false"}};
 template <>
 inline std::optional<bool> get(const argument_map& options,
-                        const std::string_view& option) {
+                        std::string_view option) {
   if (const auto value = get_value(options, option)) {
-    return std::none_of(falsities.begin(), falsities.end(),
-                        [&value](auto falsity) { return *value == falsity; });
+    return std::ranges::none_of(falsities,
+                                [&value](auto falsity) { return *value == falsity; });
   }
   if (options.find(option) != options.end()) return true;
   return std::nullopt;
@@ -165,7 +171,8 @@ inline std::optional<bool> get(const argument_map& options,
 // no suitable values or the key does not exist, returns nullopt.
 template <class T>
 std::vector<std::optional<T>> get_multiple(const argument_map& options,
-                                           const std::string_view& option) {
+                                           std::string_view option) {
+  static_assert(Extractable<T>, "T must support extraction via operator>>");
   std::vector<std::optional<T>> values;
   const auto views = get_values(options, option);
   for (const auto &view : views) {
@@ -185,13 +192,13 @@ std::vector<std::optional<T>> get_multiple(const argument_map& options,
 // Since the values are already stored as strings, there's no need to use `>>`.
 template <>
 inline std::vector<std::optional<std::string_view>> get_multiple(
-                  const argument_map& options, const std::string_view& option) {
+                  const argument_map& options, std::string_view option) {
   return get_values(options, option);
 }
 
 template <>
 inline std::vector<std::optional<std::string>> get_multiple(
-                  const argument_map& options, const std::string_view& option) {
+                  const argument_map& options, std::string_view option) {
   const auto views = get_values(options, option);
   std::vector<std::optional<std::string>> values(views.begin(), views.end());
   return values;
@@ -202,7 +209,7 @@ inline std::vector<std::optional<std::string>> get_multiple(
 // for being present.
 template <>
 inline std::vector<std::optional<bool>> get_multiple(
-                  const argument_map& options, const std::string_view& option) {
+                  const argument_map& options, std::string_view option) {
   const auto views = get_values(options, option);
   std::vector<std::optional<bool>> values;
   for (const auto view : views) {
@@ -210,8 +217,8 @@ inline std::vector<std::optional<bool>> get_multiple(
       values.push_back(true);
       continue;
     }
-    values.push_back(std::none_of(falsities.begin(), falsities.end(),
-                                  [&view](auto falsity) { return view == falsity; }));
+    values.push_back(std::ranges::none_of(falsities,
+                                          [&view](auto falsity) { return view == falsity; }));
   }
   return values;
 }
@@ -222,6 +229,7 @@ inline std::vector<std::optional<bool>> get_multiple(
 template <class T>
 std::optional<T> get(const std::vector<std::string_view>& positional_arguments,
                      size_t positional_index) {
+  static_assert(Extractable<T>, "T must support extraction via operator>>");
   if (positional_index < positional_arguments.size()) {
     if (T value; std::istringstream(
                      std::string(positional_arguments[positional_index])) >>
@@ -251,34 +259,37 @@ inline std::optional<std::string> get(
   }
   return std::nullopt;
 }
-}  // namespace detail
+}  // namespace flags::detail
+
+namespace flags {
 
 struct args {
   args(const int argc, char** argv) : parser_(argc, argv) {}
 
   template <class T>
-  std::optional<T> get(const std::string_view& option) const {
+  std::optional<T> get(std::string_view option) const {
     return detail::get<T>(parser_.options(), option);
   }
 
   template <class T>
-  T get(const std::string_view& option, T&& default_value) const {
+  T get(std::string_view option, T&& default_value) const {
     return get<T>(option).value_or(default_value);
   }
 
   template <class T>
-  std::vector<std::optional<T>> get_multiple(const std::string_view& option) const {
+  std::vector<std::optional<T>> get_multiple(std::string_view option) const {
     return detail::get_multiple<T>(parser_.options(), option);
   }
 
   template <class T>
-  std::vector<T> get_multiple(const std::string_view& option, T&& default_value) const {
+  std::vector<T> get_multiple(std::string_view option, T&& default_value) const {
     const auto items = get_multiple<T>(option);
     std::vector<T> values;
     values.reserve(items.size());
-    for(const auto& item : items) {
-      values.push_back(item ? *item : default_value);
-    }
+    std::ranges::transform(items, std::back_inserter(values),
+                           [&default_value](const auto& item) {
+                             return item ? *item : default_value;
+                           });
     return values;
   }
 
@@ -305,5 +316,3 @@ struct args {
 };
 
 }  // namespace flags
-
-#endif  // FLAGS_H_

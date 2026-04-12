@@ -1,5 +1,5 @@
 # ⛳ flags
-[![Build Status](https://travis-ci.org/sailormoon/flags.svg?branch=master)](https://travis-ci.org/sailormoon/flags)
+[![CI](https://github.com/sailormoon/flags/actions/workflows/ci.yml/badge.svg)](https://github.com/sailormoon/flags/actions/workflows/ci.yml)
 
 Simple, extensible, header-only C++17 argument parser released into the public domain.
 
