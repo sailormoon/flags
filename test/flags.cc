@@ -267,6 +267,38 @@ suite<> flag_parsing("flag parsing", [](auto& _) {
     expect(fixture.args().get<double>("foobar"), equal_to(std::nullopt));
   });
 
+  // Multi-key (alias) support
+  _.test("multi-key get", []() {
+    const auto fixture =
+        args_fixture::create({"--verbose", "--count", "42"});
+    // First key matches
+    expect(fixture.args().get<bool>("verbose", "v").value_or(false),
+           equal_to(true));
+    // Second key matches
+    expect(fixture.args().get<int>("c", "count").value_or(0), equal_to(42));
+    // Neither matches
+    expect(fixture.args().get<bool>("debug", "d"), equal_to(std::nullopt));
+  });
+
+  _.test("multi-key get with short flag", []() {
+    const auto fixture = args_fixture::create({"-v", "-n", "5"});
+    expect(fixture.args().get<bool>("verbose", "v").value_or(false),
+           equal_to(true));
+    expect(fixture.args().get<int>("number", "n").value_or(0), equal_to(5));
+  });
+
+  _.test("multi-key get_multiple", []() {
+    const auto fixture =
+        args_fixture::create({"--foo", "1", "--foo", "2"});
+    auto values = fixture.args().get_multiple<int>("f", "foo");
+    expect(values.size(), equal_to(2));
+    expect(values[0].value(), equal_to(1));
+    expect(values[1].value(), equal_to(2));
+    // No match
+    auto empty = fixture.args().get_multiple<int>("bar", "b");
+    expect(empty.size(), equal_to(0));
+  });
+
   _.test("skipped tokens", [](){
     const auto fixture =
         args_fixture::create({"--foo", "--", "bar", "--baz", "1", "2", "3"});

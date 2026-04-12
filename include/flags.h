@@ -293,6 +293,22 @@ struct args {
     return values;
   }
 
+  template <class T, typename... Keys>
+    requires (sizeof...(Keys) >= 2 && (std::convertible_to<Keys, std::string_view> && ...))
+  std::optional<T> get(Keys... keys) const {
+    std::optional<T> result;
+    ((result = get<T>(std::string_view(keys)), result.has_value()) || ...);
+    return result;
+  }
+
+  template <class T, typename... Keys>
+    requires (sizeof...(Keys) >= 2 && (std::convertible_to<Keys, std::string_view> && ...))
+  std::vector<std::optional<T>> get_multiple(Keys... keys) const {
+    std::vector<std::optional<T>> result;
+    (void)((result = get_multiple<T>(std::string_view(keys)), !result.empty()) || ...);
+    return result;
+  }
+
   template <class T>
   std::optional<T> get(size_t positional_index) const {
     return detail::get<T>(parser_.positional_arguments(), positional_index);

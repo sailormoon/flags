@@ -1,7 +1,7 @@
 # ⛳ flags
 [![CI](https://github.com/sailormoon/flags/actions/workflows/ci.yml/badge.svg)](https://github.com/sailormoon/flags/actions/workflows/ci.yml)
 
-Simple, extensible, header-only C++17 argument parser released into the public domain.
+Simple, extensible, header-only C++20 argument parser released into the public domain.
 
 
 <!-- vim-markdown-toc GFM -->
@@ -11,6 +11,10 @@ Simple, extensible, header-only C++17 argument parser released into the public d
 * [api](#api)
   * [get](#get)
   * [get (with default value)](#get-with-default-value)
+  * [get (with aliases)](#get-with-aliases)
+  * [get_multiple](#get_multiple)
+  * [get_multiple (with default value)](#get_multiple-with-default-value)
+  * [get_multiple (with aliases)](#get_multiple-with-aliases)
   * [positional](#positional)
 * [usage](#usage)
   * [example](#example)
@@ -34,30 +38,48 @@ Other argument parsers are:
 - complicated
 
 # requirements
-GCC 7.0 or Clang 4.0.0 at a minimum. This library makes extensive use of `optional`, `nullopt`, and `string_view`.
+A C++20 compiler. This library uses `optional`, `string_view`, concepts, and ranges.
 
 # api
-`flags::args` exposes seven methods:
+`flags::args` exposes the following methods:
 
 ## get
-`std::optional<T> get(const std::string_view& key) const`
+`std::optional<T> get(std::string_view key) const`
 
 Attempts to parse the given key on the command-line. If the string is malformed or the argument was not passed, returns `nullopt`. Otherwise, returns the parsed type as an optional.
 
 ## get (with default value)
-`T get(const std::string_view& key, T&& default_value) const`
+> **Deprecated:** Prefer `get<T>("key").value_or(default_value)` or the alias form `get<T>("key", "k").value_or(default_value)`.
+
+`T get(std::string_view key, T&& default_value) const`
 
 Functions the same as `get`, except if the value is malformed or the key was not provided, returns `default_value`. Otherwise, returns the parsed type.
 
+## get (with aliases)
+`std::optional<T> get(Keys... keys) const`
+
+Attempts to parse each key in order, returning the first match. Useful for supporting both long and short flag names:
+```c++
+const auto verbose = args.get<bool>("verbose", "v").value_or(false);
+const auto count = args.get<int>("count", "c").value_or(0);
+```
+
 ## get_multiple
-`std::vector<std::optional<T>> get_multiple(const std::string_view& option) const`
+`std::vector<std::optional<T>> get_multiple(std::string_view option) const`
 
 Get all values passed for an option. If no value is specified (`--foo --bar`) or the value is malformed, `nullopt` will be used. Values will be in the order they were passed.
 
 ## get_multiple (with default value)
-`std::vector<T> get_multiple(const std::string_view& option, T&& default_value) const`
+> **Deprecated:** Prefer using `get_multiple<T>("key")` and handling `nullopt` values directly.
+
+`std::vector<T> get_multiple(std::string_view option, T&& default_value) const`
 
 Functions the same as `get_multiple`, except if the value is malformed or no value is provided, `default_value` will be used.
+
+## get_multiple (with aliases)
+`std::vector<std::optional<T>> get_multiple(Keys... keys) const`
+
+Functions the same as `get_multiple`, but tries each key in order and returns results for the first match.
 
 ## get (positional)
 `std::optional<T> get(size_t positional_index) const`
@@ -112,7 +134,7 @@ find_package(flags)
 
 This exports the `flags` target which can be linked against any other
 target. Linking against `flags` automatically sets the include
-directories and required flags for C++17 or later. For example:
+directories and required flags for C++20 or later. For example:
 
 ```cmake
 add_executable(myexe mysources...)
@@ -145,7 +167,7 @@ int main(int argc, char** argv) {
   }
   std::cout << "That's " << *count << " incredible, colossal credits!\n";
 
-  if (args.get<bool>("laugh", false)) {
+  if (args.get<bool>("laugh").value_or(false)) {
     std::cout << "Ha ha ha ha!\n";
   }
   return 0;
@@ -170,7 +192,7 @@ $ ./program --count=5 --laugh
 int main(int argc, char** argv) {
   const flags::args args(argc, argv);
   const auto& files = args.positional();
-  const auto verbose = args.get<bool>("verbose", false);
+  const auto verbose = args.get<bool>("verbose", "v").value_or(false);
   if (verbose) {
     std::cout << "I'm a verbose program! I'll be reading the following files:\n";
     for (const auto& file : files) {
@@ -182,7 +204,7 @@ int main(int argc, char** argv) {
 }
 ```
 ```bash
-$ ./program /tmp/one /tmp/two /tmp/three --verbose
+$ ./program /tmp/one /tmp/two /tmp/three -v
 > I'm a verbose program! I'll be reading the following files:
 > * /tmp/one
 > * /tmp/two
@@ -258,11 +280,13 @@ booleans are a special case. The following values make an argument considered `f
 If none of these conditions are met, the bool is considered `true`.
 
 # testing
-flags uses both [bfg9000](https://github.com/jimporter/bfg9000) and [mettle](https://github.com/jimporter/mettle) for unit-testing. After installing both `bfg9000` and `mettle`, run the following commands to kick off the tests:
+flags uses [mettle](https://github.com/jimporter/mettle) for unit-testing. Clone mettle and compile the tests:
 
-1. `9k build/`
-2. `cd build`
-3. `ninja test`
+```sh
+$ git clone https://github.com/jimporter/mettle.git /tmp/mettle
+$ c++ -std=c++20 -I include -I /tmp/mettle/include test/flags.cc -o test_flags
+$ ./test_flags
+```
 
 # contributing
 Contributions of any variety are greatly appreciated. All code is passed through `clang-format` using the Google style.
