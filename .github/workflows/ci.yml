@@ -16,13 +16,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Clone mettle
-        run: git clone --depth 1 https://github.com/jimporter/mettle.git /tmp/mettle
-
-      - name: Checkout pre-C++20 mettle
         run: |
-          cd /tmp/mettle
-          COMMIT=$(git log --oneline --all --grep="Start using concepts" --format="%H")
-          git checkout "${COMMIT}^"
+          git clone https://github.com/jimporter/mettle.git /tmp/mettle
+          git -C /tmp/mettle checkout c00953a8cad7dac67a291228fab84ae5033c6307
 
       - name: Build and run tests
         run: |
