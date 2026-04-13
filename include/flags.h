@@ -44,11 +44,11 @@ struct parser {
   }
   parser& operator=(const parser&) = delete;
 
-  const argument_map& options() const { return options_; }
-  const std::vector<std::string_view>& positional_arguments() const {
+  [[nodiscard]] const argument_map& options() const { return options_; }
+  [[nodiscard]] const std::vector<std::string_view>& positional_arguments() const {
     return positional_arguments_;
   }
-  const std::vector<std::string_view>& skipped_tokens() const {
+  [[nodiscard]] const std::vector<std::string_view>& skipped_tokens() const {
     return skipped_tokens_;
   }
 
@@ -104,7 +104,7 @@ struct parser {
 };
 
 // If a key exists, return an optional populated with its value.
-inline std::optional<std::string_view> get_value(
+[[nodiscard]] inline std::optional<std::string_view> get_value(
     const argument_map& options, std::string_view option) {
   if (const auto it = options.find(option); it != options.end()) {
     // If a key exists, there must be at least one value
@@ -114,7 +114,7 @@ inline std::optional<std::string_view> get_value(
 }
 
 // If a key exists, return a vector with its values
-inline std::vector<std::optional<std::string_view>> get_values(
+[[nodiscard]] inline std::vector<std::optional<std::string_view>> get_values(
     const argument_map& options, std::string_view option) {
   if (const auto it = options.find(option); it != options.end()) {
     return it->second;
@@ -126,7 +126,7 @@ inline std::vector<std::optional<std::string_view>> get_values(
 // If the value cannot be properly parsed or the key does not exist, returns
 // nullopt.
 template <class T>
-std::optional<T> get(const argument_map& options,
+[[nodiscard]] std::optional<T> get(const argument_map& options,
                      std::string_view option) {
   static_assert(Extractable<T>, "T must support extraction via operator>>");
   if (const auto view = get_value(options, option)) {
@@ -137,13 +137,13 @@ std::optional<T> get(const argument_map& options,
 
 // Since the values are already stored as strings, there's no need to use `>>`.
 template <>
-inline std::optional<std::string_view> get(const argument_map& options,
+[[nodiscard]] inline std::optional<std::string_view> get(const argument_map& options,
                                     std::string_view option) {
   return get_value(options, option);
 }
 
 template <>
-inline std::optional<std::string> get(const argument_map& options,
+[[nodiscard]] inline std::optional<std::string> get(const argument_map& options,
                                std::string_view option) {
   if (const auto view = get<std::string_view>(options, option)) {
     return std::string(*view);
@@ -156,7 +156,7 @@ inline std::optional<std::string> get(const argument_map& options,
 // present.
 constexpr std::array<const char*, 5> falsities{{"0", "n", "no", "f", "false"}};
 template <>
-inline std::optional<bool> get(const argument_map& options,
+[[nodiscard]] inline std::optional<bool> get(const argument_map& options,
                         std::string_view option) {
   if (const auto value = get_value(options, option)) {
     return std::ranges::none_of(falsities,
@@ -170,7 +170,7 @@ inline std::optional<bool> get(const argument_map& options,
 // If a value cannot be properly parsed it is not added. If there are
 // no suitable values or the key does not exist, returns nullopt.
 template <class T>
-std::vector<std::optional<T>> get_multiple(const argument_map& options,
+[[nodiscard]] std::vector<std::optional<T>> get_multiple(const argument_map& options,
                                            std::string_view option) {
   static_assert(Extractable<T>, "T must support extraction via operator>>");
   std::vector<std::optional<T>> values;
@@ -191,13 +191,13 @@ std::vector<std::optional<T>> get_multiple(const argument_map& options,
 
 // Since the values are already stored as strings, there's no need to use `>>`.
 template <>
-inline std::vector<std::optional<std::string_view>> get_multiple(
+[[nodiscard]] inline std::vector<std::optional<std::string_view>> get_multiple(
                   const argument_map& options, std::string_view option) {
   return get_values(options, option);
 }
 
 template <>
-inline std::vector<std::optional<std::string>> get_multiple(
+[[nodiscard]] inline std::vector<std::optional<std::string>> get_multiple(
                   const argument_map& options, std::string_view option) {
   const auto views = get_values(options, option);
   std::vector<std::optional<std::string>> values(views.begin(), views.end());
@@ -208,7 +208,7 @@ inline std::vector<std::optional<std::string>> get_multiple(
 // the option will be considered falsy. Otherwise, it will be considered truthy just
 // for being present.
 template <>
-inline std::vector<std::optional<bool>> get_multiple(
+[[nodiscard]] inline std::vector<std::optional<bool>> get_multiple(
                   const argument_map& options, std::string_view option) {
   const auto views = get_values(options, option);
   std::vector<std::optional<bool>> values;
@@ -227,7 +227,7 @@ inline std::vector<std::optional<bool>> get_multiple(
 // If the value cannot be properly parsed or the key does not exist, returns
 // nullopt.
 template <class T>
-std::optional<T> get(const std::vector<std::string_view>& positional_arguments,
+[[nodiscard]] std::optional<T> get(const std::vector<std::string_view>& positional_arguments,
                      size_t positional_index) {
   static_assert(Extractable<T>, "T must support extraction via operator>>");
   if (positional_index < positional_arguments.size()) {
@@ -241,7 +241,7 @@ std::optional<T> get(const std::vector<std::string_view>& positional_arguments,
 
 // Since the values are already stored as strings, there's no need to use `>>`.
 template <>
-inline std::optional<std::string_view> get(
+[[nodiscard]] inline std::optional<std::string_view> get(
     const std::vector<std::string_view>& positional_arguments,
     size_t positional_index) {
   if (positional_index < positional_arguments.size()) {
@@ -251,7 +251,7 @@ inline std::optional<std::string_view> get(
 }
 
 template <>
-inline std::optional<std::string> get(
+[[nodiscard]] inline std::optional<std::string> get(
     const std::vector<std::string_view>& positional_arguments,
     size_t positional_index) {
   if (positional_index < positional_arguments.size()) {
@@ -267,22 +267,22 @@ struct args {
   args(const int argc, char** argv) : parser_(argc, argv) {}
 
   template <class T>
-  std::optional<T> get(std::string_view option) const {
+  [[nodiscard]] std::optional<T> get(std::string_view option) const {
     return detail::get<T>(parser_.options(), option);
   }
 
   template <class T>
-  T get(std::string_view option, T&& default_value) const {
+  [[nodiscard]] T get(std::string_view option, T&& default_value) const {
     return get<T>(option).value_or(default_value);
   }
 
   template <class T>
-  std::vector<std::optional<T>> get_multiple(std::string_view option) const {
+  [[nodiscard]] std::vector<std::optional<T>> get_multiple(std::string_view option) const {
     return detail::get_multiple<T>(parser_.options(), option);
   }
 
   template <class T>
-  std::vector<T> get_multiple(std::string_view option, T&& default_value) const {
+  [[nodiscard]] std::vector<T> get_multiple(std::string_view option, T&& default_value) const {
     const auto items = get_multiple<T>(option);
     std::vector<T> values;
     values.reserve(items.size());
@@ -295,7 +295,7 @@ struct args {
 
   template <class T, typename... Keys>
     requires (sizeof...(Keys) >= 2 && (std::convertible_to<Keys, std::string_view> && ...))
-  std::optional<T> get(Keys... keys) const {
+  [[nodiscard]] std::optional<T> get(Keys... keys) const {
     std::optional<T> result;
     ((result = get<T>(std::string_view(keys)), result.has_value()) || ...);
     return result;
@@ -303,27 +303,27 @@ struct args {
 
   template <class T, typename... Keys>
     requires (sizeof...(Keys) >= 2 && (std::convertible_to<Keys, std::string_view> && ...))
-  std::vector<std::optional<T>> get_multiple(Keys... keys) const {
+  [[nodiscard]] std::vector<std::optional<T>> get_multiple(Keys... keys) const {
     std::vector<std::optional<T>> result;
     (void)((result = get_multiple<T>(std::string_view(keys)), !result.empty()) || ...);
     return result;
   }
 
   template <class T>
-  std::optional<T> get(size_t positional_index) const {
+  [[nodiscard]] std::optional<T> get(size_t positional_index) const {
     return detail::get<T>(parser_.positional_arguments(), positional_index);
   }
 
   template <class T>
-  T get(size_t positional_index, T&& default_value) const {
+  [[nodiscard]] T get(size_t positional_index, T&& default_value) const {
     return get<T>(positional_index).value_or(default_value);
   }
 
-  const std::vector<std::string_view>& positional() const {
+  [[nodiscard]] const std::vector<std::string_view>& positional() const {
     return parser_.positional_arguments();
   }
 
-  const std::vector<std::string_view>& skipped() const {
+  [[nodiscard]] const std::vector<std::string_view>& skipped() const {
     return parser_.skipped_tokens();
   }
 
