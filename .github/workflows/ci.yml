@@ -6,24 +6,107 @@ on:
   pull_request:
     branches: [master]
 
+permissions:
+  contents: read
+
 jobs:
   test:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+    name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu (GCC + ASan/UBSan)
+            os: ubuntu-latest
+            cxx: g++
+            cxx_flags: -fsanitize=address,undefined -fno-omit-frame-pointer -D_GLIBCXX_ASSERTIONS
+            linker_flags: -fsanitize=address,undefined
+          - name: Ubuntu (Clang + ASan/UBSan)
+            os: ubuntu-latest
+            cxx: clang++
+            cxx_flags: -fsanitize=address,undefined -fno-omit-frame-pointer
+            linker_flags: -fsanitize=address,undefined
+          - name: macOS (AppleClang + ASan/UBSan)
+            os: macos-latest
+            cxx: clang++
+            cxx_flags: -fsanitize=address,undefined -fno-omit-frame-pointer
+            linker_flags: -fsanitize=address,undefined
+          - name: Windows (MSVC)
+            os: windows-latest
+            cxx: ""
+            cxx_flags: ""
+            linker_flags: ""
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - name: Clone mettle
-        run: git clone --depth 1 https://github.com/jimporter/mettle.git /tmp/mettle
-
-      - name: Build and run tests
+      - name: Configure
+        shell: bash
         run: |
-          c++ -std=c++20 \
-            -Wall -Wextra -pedantic -Werror \
-            -I include \
-            -I /tmp/mettle/include \
-            test/flags.cc \
-            -o test_flags
-          ./test_flags
+          args=(-S . -B build -DCMAKE_BUILD_TYPE=Debug)
+          if [ -n "${{ matrix.cxx }}" ]; then
+            args+=("-DCMAKE_CXX_COMPILER=${{ matrix.cxx }}")
+          fi
+          if [ -n "${{ matrix.cxx_flags }}" ]; then
+            args+=("-DCMAKE_CXX_FLAGS=${{ matrix.cxx_flags }}")
+          fi
+          if [ -n "${{ matrix.linker_flags }}" ]; then
+            args+=("-DCMAKE_EXE_LINKER_FLAGS=${{ matrix.linker_flags }}")
+          fi
+          cmake "${args[@]}"
+
+      - name: Build
+        run: cmake --build build --config Debug
+
+      - name: Test
+        run: ctest --test-dir build -C Debug --output-on-failure
+
+  cmake-packaging:
+    name: CMake Install & find_package (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install flags
+        shell: bash
+        run: |
+          cmake -S . -B build -DFLAGS_BUILD_TESTS=OFF
+          cmake --install build --prefix install
+          test -f install/include/flags.h
+          test ! -d install/include/include
+
+      - name: Verify find_package consumer
+        shell: bash
+        run: |
+          mkdir -p consumer
+          cat << 'EOF' > consumer/CMakeLists.txt
+          cmake_minimum_required(VERSION 3.20)
+          project(flags_consumer LANGUAGES CXX)
+          find_package(flags 2.0 REQUIRED)
+          add_executable(consumer main.cc)
+          target_link_libraries(consumer PRIVATE flags::flags)
+          EOF
+          cat << 'EOF' > consumer/main.cc
+          #include <flags.h>
+          #include <array>
+
+          int main() {
+            constexpr std::array<const char*, 3> argv = {"consumer", "--n", "42"};
+            const flags::args args(argv);
+            return args.get<int>("n").value_or(0) == 42 ? 0 : 1;
+          }
+          EOF
+          PREFIX_DIR="$(pwd -W 2>/dev/null || pwd)/install"
+          cmake -S consumer -B consumer/build -DCMAKE_PREFIX_PATH="$PREFIX_DIR"
+          cmake --build consumer/build --config Release
+          if [ -x consumer/build/Release/consumer.exe ]; then
+            ./consumer/build/Release/consumer.exe
+          else
+            ./consumer/build/consumer
+          fi

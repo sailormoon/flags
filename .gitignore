@@ -1,1 +1,9 @@
 build/
+out/
+.cache/
+compile_commands.json
+CMakeUserPresets.json
+test_flags
+*.o
+*.obj
+*.exe
