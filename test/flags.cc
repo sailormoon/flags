@@ -6,11 +6,27 @@
 #include <cstdint>
 #include <istream>
 #include <optional>
+#include <ostream>
 #include <string>
 #include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+namespace doctest {
+template <typename T>
+struct StringMaker<std::optional<T>> {
+  static String convert(const std::optional<T>& value) {
+    if (!value) return "std::nullopt";
+    return toString(*value);
+  }
+};
+
+template <>
+struct StringMaker<std::nullopt_t> {
+  static String convert(const std::nullopt_t&) { return "std::nullopt"; }
+};
+}  // namespace doctest
 
 namespace {
 
@@ -66,6 +82,10 @@ struct Date {
 
 std::istream& operator>>(std::istream& stream, Date& date) {
   return stream >> date.day >> date.month >> date.year;
+}
+
+std::ostream& operator<<(std::ostream& stream, const Date& date) {
+  return stream << date.year << '-' << date.month << '-' << date.day;
 }
 
 }  // namespace
@@ -274,7 +294,7 @@ TEST_SUITE("flag parsing") {
     CHECK_FALSE(fixture.args().contains(""));
   }
 
-  TEST_CASE("repeated flags: get returns last value, get_multiple returns all") {
+  TEST_CASE("repeated flags with get (last wins) and get_multiple (all)") {
     const args_fixture fixture({"--foo", "bar", "--foo", "baz"});
     CHECK(fixture.args().get<std::string>("foo") == "baz");
 
