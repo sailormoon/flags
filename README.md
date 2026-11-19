@@ -1,7 +1,7 @@
 # ⛳ flags
 [![CI](https://github.com/sailormoon/flags/actions/workflows/ci.yml/badge.svg)](https://github.com/sailormoon/flags/actions/workflows/ci.yml)
 
-Simple, extensible, header-only C++20 argument parser released into the public domain.
+Simple, extensible, header-only C++23 argument parser released into the public domain.
 
 
 <!-- vim-markdown-toc GFM -->
@@ -9,14 +9,26 @@ Simple, extensible, header-only C++20 argument parser released into the public d
 * [why](#why)
 * [requirements](#requirements)
 * [api](#api)
+  * [program](#program)
+  * [contains](#contains)
   * [get](#get)
-  * [get (with default value)](#get-with-default-value)
   * [get (with aliases)](#get-with-aliases)
+  * [get (with default value)](#get-with-default-value)
   * [get_multiple](#get_multiple)
-  * [get_multiple (with default value)](#get_multiple-with-default-value)
   * [get_multiple (with aliases)](#get_multiple-with-aliases)
+  * [get_multiple (with default value)](#get_multiple-with-default-value)
+  * [get (positional)](#get-positional)
+  * [get (positional with default value)](#get-positional-with-default-value)
+  * [keys](#keys)
   * [positional](#positional)
+  * [skipped](#skipped)
 * [usage](#usage)
+  * [just the headers](#just-the-headers)
+  * [Using CMake](#using-cmake)
+    * [CMake Installation](#cmake-installation)
+    * [`find_package`](#find_package)
+    * [`FetchContent`](#fetchcontent)
+    * [`add_subdirectory`](#add_subdirectory)
   * [example](#example)
   * [another example](#another-example)
   * [extensions](#extensions)
@@ -25,6 +37,8 @@ Simple, extensible, header-only C++20 argument parser released into the public d
     * [key formatting](#key-formatting)
     * [value assignment](#value-assignment)
       * [bools](#bools)
+    * [end of options (`--`)](#end-of-options---)
+    * [lifetime and parsing caveats](#lifetime-and-parsing-caveats)
 * [testing](#testing)
 * [contributing](#contributing)
 
@@ -38,22 +52,26 @@ Other argument parsers are:
 - complicated
 
 # requirements
-A C++20 compiler. This library uses `optional`, `string_view`, concepts, and ranges.
+A C++23 compiler (GCC 12+, Clang 14+, AppleClang 15+, or MSVC 2022+). This library uses `std::optional` monadic operations, `std::string_view`, `std::span`, `std::from_chars`, concepts, and ranges.
 
 # api
-`flags::args` exposes the following methods:
+`flags::args` can be constructed from `(int argc, const char* const* argv)` (compatible with `main`'s `char** argv`) or `std::span<const char* const>` and exposes the following methods:
+
+## program
+`std::string_view program() const noexcept`
+
+Returns the program name (`argv[0]`), or an empty view if `argc <= 0`.
+
+## contains
+`bool contains(std::string_view option) const`  
+`bool contains(Keys... keys) const`
+
+Returns `true` if the given option (or any of the provided alias keys) was supplied on the command line, regardless of whether it had a value.
 
 ## get
 `std::optional<T> get(std::string_view key) const`
 
-Attempts to parse the given key on the command-line. If the string is malformed or the argument was not passed, returns `nullopt`. Otherwise, returns the parsed type as an optional.
-
-## get (with default value)
-> **Deprecated:** Prefer `get<T>("key").value_or(default_value)` or the alias form `get<T>("key", "k").value_or(default_value)`.
-
-`T get(std::string_view key, T&& default_value) const`
-
-Functions the same as `get`, except if the value is malformed or the key was not provided, returns `default_value`. Otherwise, returns the parsed type.
+Attempts to parse the last-supplied value for the given key on the command line. If the string is malformed or the argument was not passed, returns `std::nullopt`. Otherwise, returns the parsed type as an optional.
 
 ## get (with aliases)
 `std::optional<T> get(Keys... keys) const`
@@ -64,97 +82,119 @@ const auto verbose = args.get<bool>("verbose", "v").value_or(false);
 const auto count = args.get<int>("count", "c").value_or(0);
 ```
 
+## get (with default value)
+> **Deprecated:** Prefer `get<T>("key").value_or(default_value)` or the alias form `get<T>("key", "k").value_or(default_value)`.
+
+`T get(std::string_view key, U&& default_value) const` *(disabled when `U` is convertible to `std::string_view`, which resolves to the alias overload)*
+
+Functions the same as `get`, except if the value is malformed or the key was not provided, returns `default_value`.
+
 ## get_multiple
 `std::vector<std::optional<T>> get_multiple(std::string_view option) const`
 
-Get all values passed for an option. If no value is specified (`--foo --bar`) or the value is malformed, `nullopt` will be used. Values will be in the order they were passed.
-
-## get_multiple (with default value)
-> **Deprecated:** Prefer using `get_multiple<T>("key")` and handling `nullopt` values directly.
-
-`std::vector<T> get_multiple(std::string_view option, T&& default_value) const`
-
-Functions the same as `get_multiple`, except if the value is malformed or no value is provided, `default_value` will be used.
+Get all values passed for an option in command-line order. If no value is specified (`--foo --bar`) or the value is malformed, `std::nullopt` is used (except for `bool`, where a valueless flag yields `true`).
 
 ## get_multiple (with aliases)
 `std::vector<std::optional<T>> get_multiple(Keys... keys) const`
 
-Functions the same as `get_multiple`, but tries each key in order and returns results for the first match.
+Collects all values across any of the given alias keys in their original command-line order (e.g. `-I /a --include /b` queried with `get_multiple<std::string>("include", "I")` returns `{"/a", "/b"}`).
+
+## get_multiple (with default value)
+> **Deprecated:** Prefer using `get_multiple<T>("key")` and handling `std::nullopt` values directly.
+
+`std::vector<T> get_multiple(std::string_view option, U&& default_value) const` *(disabled when `U` is convertible to `std::string_view`)*
+
+Functions the same as `get_multiple`, except if a value is malformed or missing, `default_value` is substituted.
 
 ## get (positional)
-`std::optional<T> get(size_t positional_index) const`
+`std::optional<T> get(std::size_t positional_index) const`
 
-Get an argument from the positional arguments at a specified index. If the value is malformed or the index is invalid, `nullopt` is returned.
+Get an argument from the positional arguments at a specified index. If the value is malformed or the index is invalid, `std::nullopt` is returned.
 
 ## get (positional with default value)
-`T get(size_t positional_index, T&& default_value) const`
+> **Deprecated:** Prefer `get<T>(positional_index).value_or(default_value)`.
 
-Functions the same as positional `get`, except if the value is malformed or the index is invalid, returns `default_value`. Otherwise, returns the parsed type.
+`T get(std::size_t positional_index, U&& default_value) const`
+
+Functions the same as positional `get`, except if the value is malformed or the index is invalid, returns `default_value`.
+
+## keys
+`const std::vector<std::string_view>& keys() const noexcept`
+
+Returns all unique parsed option names in order of first appearance (useful for validating unknown flags).
 
 ## positional
-`const std::vector<std::string_view>& positional() const`
+`const std::vector<std::string_view>& positional() const noexcept`
 
-Returns all of the positional arguments from argv in order.
+Returns all of the positional arguments from `argv` in order.
+
+## skipped
+`const std::vector<std::string_view>& skipped() const noexcept`
+
+Returns all tokens appearing after the `--` end-of-options delimiter verbatim.
 
 # usage
-### just the headers
-Just include `flags.h` from the `include` directory into your project.
+## just the headers
+Just include `flags.h` from the `include` directory in your project.
 
 ## Using CMake
 
 ### CMake Installation
 
-Flags can be built and installed using [CMake], e.g.
+Flags can be installed using CMake:
 
 ```sh
-$ mkdir build
-$ cd build
-$ cmake ..
-$ make
-$ make install
+$ cmake -S . -B build -DFLAGS_BUILD_TESTS=OFF
+$ cmake --install build
 ```
 
-The above will install Flags into the standard installation path on a UNIX
-system, e.g. `/usr/local/include/`. To change the installation path, use:
+The above installs `flags.h` and the CMake package config files into the system prefix (e.g. `/usr/local/include/flags.h`). To change the installation path, pass `--prefix`:
 
 ```sh
-$ cmake .. -DCMAKE_INSTALL_PREFIX=../install
+$ cmake --install build --prefix ./install
 ```
-
-in the above.
 
 ### `find_package`
 
-Installation creates a `flags-config.cmake` which allows CMake
-projects to find Flags using `find_package`:
+Installation generates `flagsConfig.cmake`, which allows CMake projects to find Flags using `find_package`:
 
 ```cmake
-find_package(flags)
+find_package(flags REQUIRED)
 ```
 
-This exports the `flags` target which can be linked against any other
-target. Linking against `flags` automatically sets the include
-directories and required flags for C++20 or later. For example:
+This exports the `flags::flags` target, which automatically sets the include directories and C++23 compile feature:
 
 ```cmake
 add_executable(myexe mysources...)
-target_link_libraries(myexe PRIVATE flags)
+target_link_libraries(myexe PRIVATE flags::flags)
+```
+
+### `FetchContent`
+
+```cmake
+include(FetchContent)
+FetchContent_Declare(
+  flags
+  GIT_REPOSITORY https://github.com/sailormoon/flags.git
+  GIT_TAG v2.0.0)
+FetchContent_MakeAvailable(flags)
+
+add_executable(myexe mysources...)
+target_link_libraries(myexe PRIVATE flags::flags)
 ```
 
 ### `add_subdirectory`
 
-The Flags can also be added as a dependency with `add_subdirectory`:
+Flags can also be added directly with `add_subdirectory`:
 
 ```cmake
 add_subdirectory(path/to/flags)
+target_link_libraries(myexe PRIVATE flags::flags)
 ```
-
-This also exports the `flags` target which can be linked against any
-other target just as with the installation case.
 
 ## example
 ```c++
-#include "flags.h" // #include <flags.h> for cmake
+#include "flags.h"  // #include <flags.h> for CMake
 #include <iostream>
 
 int main(int argc, char** argv) {
@@ -185,7 +225,7 @@ $ ./program --count=5 --laugh
 
 ## another example
 ```c++
-#include "flags.h" // #include <flags.h> for cmake
+#include "flags.h"  // #include <flags.h> for CMake
 #include <iostream>
 #include <string>
 
@@ -211,19 +251,18 @@ $ ./program /tmp/one /tmp/two /tmp/three -v
 > * /tmp/three
 ```
 ```bash
-$ ./program /tmp/one /tmp/two /tmp/three --noverbose
->%
+$ ./program /tmp/one /tmp/two /tmp/three --verbose=false
 ```
 
 ## extensions
-`flags` simply uses the `istream` operator to parse values from `argv`. To extend the parser to support your own types, just supply an overloaded `>>`.
+Built-in string, boolean, `char`, and numeric types are parsed directly (using `std::from_chars` where available for fast, strict, locale-independent numeric parsing). To extend the parser to support your own types, supply an overloaded `operator>>` for a default-initializable type.
 
 ### example
 ```c++
 struct Date {
-  int day;
-  int month;
-  int year;
+  int day = 0;
+  int month = 0;
+  int year = 0;
 };
 
 // Custom parsing code.
@@ -234,7 +273,7 @@ std::istream& operator>>(std::istream& stream, Date& date) {
 int main(int argc, char** argv) {
   const flags::args args(argc, argv);
   if (const auto date = args.get<Date>("date")) {
-    // Output %Y/%m/%d if a date was provided.
+    // Output YYYY:MM:DD if a date was provided.
     std::cout << date->year << ":" << date->month << ":" << date->day << '\n';
     return 0;
   }
@@ -258,35 +297,47 @@ $ ./program
 `flags`'s primary goal is to be simple to use for both the user and programmer.
 
 ### key formatting
-A key can have any number of preceding `-`s, but must have more than 0.
-The following are valid keys:
+A key can have any number of preceding `-`s, but must have at least one non-dash character:
 - `-key`
 - `--key`
 - `-------------key`
+
+Standalone `-` (commonly used for stdin/stdout) and dash-only tokens (other than `--`) are treated as values/positional arguments rather than option keys.
 
 ### value assignment
 A value can be assigned to a key in one of two ways:
 - `$ ./program --key=value`
 - `$ ./program --key value`
 
+Negative numbers (such as `--offset -5` or `--delta -3.14`) are accepted as values for the preceding option as well as with `=` (`--offset=-5`).
+
+If an option is passed multiple times (e.g. `--port 80 --port 8080`), `get` returns the **last** value (`8080`), while `get_multiple` returns all values in order (`{80, 8080}`).
+
 #### bools
-booleans are a special case. The following values make an argument considered `false`-y when parsed as a bool:
+Booleans are a special case. The following values (case-insensitive) are considered `false` when parsed as a `bool`:
 - `f`
 - `false`
 - `n`
 - `no`
 - `0`
 
-If none of these conditions are met, the bool is considered `true`.
+If a boolean option is present without a value (e.g. `--verbose`), or has any other value, it evaluates to `true`.
+
+### end of options (`--`)
+A standalone `--` token stops flag parsing. Any pending flag before `--` is flushed as valueless, and all tokens after `--` are stored verbatim in `args.skipped()`.
+
+### lifetime and parsing caveats
+- **Non-owning views:** `flags::args` stores `std::string_view` slices into the `argv` buffers. The backing `argv` strings must outlive the `flags::args` instance.
+- **Schema-less parsing:** Because `flags` does not require upfront flag declarations, a bare flag followed by a non-dash token (e.g. `./program --verbose file.txt`) assigns `file.txt` as the value of `--verbose` rather than a positional argument. Place valueless boolean flags after positional arguments, pass an explicit value (`--verbose=true file.txt`), or separate with `--`.
 
 # testing
-flags uses [mettle](https://github.com/jimporter/mettle) for unit-testing. Clone mettle and compile the tests:
+`flags` uses [doctest](https://github.com/doctest/doctest) via CMake `FetchContent` and CTest:
 
 ```sh
-$ git clone https://github.com/jimporter/mettle.git /tmp/mettle
-$ c++ -std=c++20 -I include -I /tmp/mettle/include test/flags.cc -o test_flags
-$ ./test_flags
+$ cmake -S . -B build
+$ cmake --build build
+$ ctest --test-dir build --output-on-failure
 ```
 
 # contributing
-Contributions of any variety are greatly appreciated. All code is passed through `clang-format` using the Google style.
+Contributions of any variety are greatly appreciated. Code is formatted with `clang-format` using the repository's `.clang-format` (Google style).
