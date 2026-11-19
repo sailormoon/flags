@@ -84,6 +84,7 @@ if(FLAGS_BUILD_TESTS)
       GIT_TAG v2.5.3
       GIT_SHALLOW TRUE)
     FetchContent_MakeAvailable(doctest)
+    list(APPEND CMAKE_MODULE_PATH "${doctest_SOURCE_DIR}/scripts/cmake")
   endif()
 
   if(TARGET doctest)
@@ -103,7 +104,8 @@ if(FLAGS_BUILD_TESTS)
     target_compile_options(flags_test PRIVATE -Wall -Wextra -Wpedantic -Werror)
   endif()
 
-  add_test(NAME flags_test COMMAND flags_test)
+  include(doctest)
+  doctest_discover_tests(flags_test ADD_LABELS 1)
 endif()
 
 if(FLAGS_IS_TOP_LEVEL)
